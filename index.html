@@ -4908,7 +4908,7 @@ function loadFromSheets() {
     var allItems=[], seen={};
     results.forEach(function(items) {
       items.forEach(function(item) {
-        if (item.code && !seen[item.code]) { seen[item.code]=true; allItems.push(item); }
+        if (item.code && item.code.length<=20 && !seen[item.code]) { seen[item.code]=true; allItems.push(item); }
       });
     });
     if (allItems.length === 0) {
