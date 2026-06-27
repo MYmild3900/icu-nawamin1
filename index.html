@@ -4815,7 +4815,7 @@ function renderStockTable() {
     var sc  = sts==='ok'?'var(--ok-t)':sts==='wn'?'var(--wn-t)':'var(--rd-t)';
     var scls= sts==='ok'?'so':sts==='wn'?'sw2':'sr';
     var slb = sts==='ok'?'ปกติ':sts==='wn'?'ใกล้หมด':'หมดแล้ว';
-    var img = item.imgUrl||item.imgData||'';
+    var img = item.imgData||item.imgUrl||'';
     var ist = img
       ? 'width:36px;height:36px;border-radius:6px;background-image:url('+img+');background-size:cover;background-position:center;display:inline-block;font-size:0'
       : 'width:36px;height:36px;border-radius:6px;background:var(--g1);display:inline-block;font-size:18px;line-height:36px;text-align:center';
@@ -4916,6 +4916,7 @@ function loadFromSheets() {
     }
     ITEMS.length=0;
     allItems.forEach(function(item){ ITEMS.push(item); });
+    ITEMS.forEach(function(item){var s=item.code?localStorage.getItem('img_'+item.code):null;if(s)item.imgData=s;});
     renderStockTable();
     if (typeof syncACLists==='function') syncACLists();
     updateDashStats();
