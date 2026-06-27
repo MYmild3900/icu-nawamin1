@@ -2639,6 +2639,7 @@ function doLogin(){
   document.getElementById('app').style.display='block';
   document.getElementById('sbn').textContent=u;
   document.getElementById('tnm').textContent=u;
+  setTimeout(function(){ updateDashStats(); updateDashLists(); }, 100);
 }
 document.getElementById('upw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 function doLogout(){if(confirm('ต้องการออกจากระบบ?')){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('usel').value='';document.getElementById('upw').value=''}}
@@ -4093,7 +4094,7 @@ function liveSearch(v){ filterStock(); }
 
 function filterStock(){
   var q   = ((document.getElementById('stock-search')||{}).value||'').trim().toLowerCase();
-  var cat = ((document.getElementById('stock-cat-sel')||{}).value||'').toLowerCase();
+  var cat = ((document.getElementById('stock-cat-sel')||{}).value||'').trim().toLowerCase();
   var sts = ((document.getElementById('stock-sts-sel')||{}).value||'').toLowerCase();
 
   var rows = document.querySelectorAll('#stock-tbody tr');
