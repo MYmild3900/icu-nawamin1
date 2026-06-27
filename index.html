@@ -4869,7 +4869,7 @@ function loadFromSheets() {
           var lot    = g('lot','ล็อต') || '—';
           var recv   = g('recv','วันรับ','วันที่รับ') || '—';
           var exp    = g('exp','วันหมดอายุ','exp date') || '—';
-          var imgUrl = g('imgurl','img_url','รูป','รูปภาพ');
+          var imgUrl = g('imgurl','img_url','รูป','รูปภาพ','🖼️ url รูปภาพ (วาง link รูปจากอินเทอร์เน็ต)');
           var sts    = cur<=0?'rd':cur<=min?'wn':'ok';
           return {
             code:code, name:name, cat:cat, icon:icon,
