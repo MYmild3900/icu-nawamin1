@@ -4764,33 +4764,40 @@ var GS_ENABLED = true;
 // ── ฟังก์ชันช่วย: แปลง CSV text → array of objects ──
 function parseCSVToObjects(text) {
   if (!text || !text.trim()) return [];
-  var lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
-  if (lines.length < 2) return [];
-  function splitRow(line) {
-    var result=[], cur='', inQ=false;
-    for (var i=0;i<line.length;i++) {
-      var c=line[i];
-      if (c==='"') { if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; }
-      else if (c===','&&!inQ) { result.push(cur.trim()); cur=''; }
-      else cur+=c;
-    }
-    result.push(cur.trim());
-    return result;
-  }
-  // ข้ามแถวหัวตาราง — หาแถว header จริงๆ
-  var headerIdx = 0;
-  for (var i=0; i<Math.min(lines.length, 5); i++) {
-    var lc = lines[i].toLowerCase();
-    if (lc.includes('รหัสพัสดุ') || lc.includes('imgurl') || lc.includes('min stock') || lc.includes('code')) {
-      headerIdx = i; break;
+  // Parse CSV แบบ character-by-character รองรับ multiline fields
+  var records = [], rec = [], field = '', inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i], nx = text[i+1];
+    if (inQ) {
+      if (c==='"' && nx==='"') { field+='"'; i++; }
+      else if (c==='"') { inQ=false; }
+      else { field+=c; }
+    } else {
+      if (c==='"') { inQ=true; }
+      else if (c===',') { rec.push(field.trim()); field=''; }
+      else if (c==='\n'||(c==='\r'&&nx==='\n')) {
+        if(c==='\r') i++;
+        rec.push(field.trim()); field='';
+        if(rec.some(function(f){return f!=='';})) records.push(rec);
+        rec=[];
+      } else { field+=c; }
     }
   }
-  var headers = splitRow(lines[headerIdx]).map(function(h){ return h.replace(/^"|"$/g,'').trim().toLowerCase(); });
-  var out = [];
-  for (var i=headerIdx+1;i<lines.length;i++) {
-    var line=lines[i].trim(); if(!line) continue;
-    var cols=splitRow(line), obj={};
-    headers.forEach(function(h,idx){ obj[h]=(cols[idx]||'').replace(/^"|"$/g,'').trim(); });
+  if(field||rec.length>0){ rec.push(field.trim()); if(rec.some(function(f){return f!=='';})) records.push(rec); }
+  if(records.length<2) return [];
+  // หา header row
+  var headerIdx=0;
+  for(var i=0;i<Math.min(records.length,5);i++){
+    var rs=records[i].join(',').toLowerCase();
+    if(rs.includes('รหัสพัสดุ')||rs.includes('imgurl')||rs.includes('min stock')||rs.includes('code')){
+      headerIdx=i; break;
+    }
+  }
+  var headers=records[headerIdx].map(function(h){return h.replace(/^"|"$/g,'').trim().toLowerCase();});
+  var out=[];
+  for(var i=headerIdx+1;i<records.length;i++){
+    var cols=records[i], obj={};
+    headers.forEach(function(h,idx){obj[h]=(cols[idx]||'').replace(/^"|"$/g,'').trim();});
     out.push(obj);
   }
   return out;
