@@ -4761,39 +4761,153 @@ function changeQRImg(input){
 var GS_URL = 'https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec';
 var GS_ENABLED = true;
 
-// ── โหลด ITEMS จาก Google Sheets ──
-function loadFromSheets() {
-  if(!GS_ENABLED) return;
-  var banner = document.getElementById('gs-status');
-  if(banner) { banner.style.display='flex'; banner.textContent='☁️ กำลังโหลดข้อมูลจาก Google Sheets...'; }
+// ── ฟังก์ชันช่วย: แปลง CSV text → array of objects ──
+function parseCSVToObjects(text) {
+  if (!text || !text.trim()) return [];
+  var lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  if (lines.length < 2) return [];
+  function splitRow(line) {
+    var result=[], cur='', inQ=false;
+    for (var i=0;i<line.length;i++) {
+      var c=line[i];
+      if (c==='"') { if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; }
+      else if (c===','&&!inQ) { result.push(cur.trim()); cur=''; }
+      else cur+=c;
+    }
+    result.push(cur.trim());
+    return result;
+  }
+  var headers = splitRow(lines[0]).map(function(h){ return h.replace(/^"|"$/g,'').trim().toLowerCase(); });
+  var out = [];
+  for (var i=1;i<lines.length;i++) {
+    var line=lines[i].trim(); if(!line) continue;
+    var cols=splitRow(line), obj={};
+    headers.forEach(function(h,idx){ obj[h]=(cols[idx]||'').replace(/^"|"$/g,'').trim(); });
+    out.push(obj);
+  }
+  return out;
+}
 
-  fetch(GS_URL + '?action=getItems')
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if(!data.ok || !data.items || data.items.length===0){
-        // ถ้า Sheet ว่าง → บันทึกข้อมูลปัจจุบันลง Sheet
-        saveToSheets();
-        return;
-      }
-      // โหลดสำเร็จ — อัปเดต ITEMS
-      ITEMS.length = 0;
-      data.items.forEach(function(item){
-        item.unitPack = item.unitPack||'—';
-        item.lots = item.lots||[{lot:item.lot||'—',recv:item.recv||'—',exp:item.exp||'—',qty:item.cur||0}];
-        ITEMS.push(item);
+// ── ฟังก์ชันช่วย: render ตารางคลังพัสดุจาก ITEMS ──
+function renderStockTable() {
+  var tbody = document.getElementById('stock-tbody');
+  if (!tbody) return;
+  function esc(s){ return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+  tbody.innerHTML = ITEMS.map(function(item) {
+    var cur=item.cur||0, mn=item.min||0, mx=item.max||0;
+    var sts = cur<=0?'rd':cur<=mn?'wn':'ok';
+    item.status=sts;
+    var sc  = sts==='ok'?'var(--ok-t)':sts==='wn'?'var(--wn-t)':'var(--rd-t)';
+    var scls= sts==='ok'?'so':sts==='wn'?'sw2':'sr';
+    var slb = sts==='ok'?'ปกติ':sts==='wn'?'ใกล้หมด':'หมดแล้ว';
+    var img = item.imgUrl||item.imgData||'';
+    var ist = img
+      ? 'width:36px;height:36px;border-radius:6px;background-image:url('+img+');background-size:cover;background-position:center;display:inline-block;font-size:0'
+      : 'width:36px;height:36px;border-radius:6px;background:var(--g1);display:inline-block;font-size:18px;line-height:36px;text-align:center';
+    var ico = img?'':(item.icon||'📦');
+    var cd=item.code||'', nm=item.name||'';
+    return '<tr data-status="'+sts+'" data-cat="'+item.cat.toLowerCase()+'">' +
+      '<td><div class="ii" style="'+ist+'">'+ico+'</div></td>' +
+      '<td><span class="cb">'+cd+'</span></td>' +
+      '<td>'+nm+'</td>' +
+      '<td><span class="cat">'+item.cat+'</span></td>' +
+      '<td><span class="ub">'+(item.unit||'')+'</span></td>' +
+      '<td>'+mn+'</td><td>'+mx+'</td>' +
+      '<td style="font-weight:700;color:'+sc+'">'+cur+'</td>' +
+      '<td style="font-size:11px;color:var(--g5)">📍 '+(item.loc||'')+'</td>' +
+      '<td style="font-size:11px;color:var(--g5)">—</td>' +
+      '<td style="font-size:11px">'+(item.exp||'—')+'</td>' +
+      '<td><span class="sts '+scls+'">'+slb+'</span></td>' +
+      '<td><button class="btn sm" onclick="openEdit(\''+esc(cd)+'\',\''+esc(nm)+'\')" style="margin-right:4px">✏️</button>' +
+      '<button class="btn sm" onclick="showQRCode(\''+esc(cd)+'\',\''+esc(nm)+'\')">⬜ QR</button></td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ── โหลด ITEMS จาก Google Sheets (CSV) ──
+function loadFromSheets() {
+  var CSV_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQpF0f8AVVgscWT1ZEI2eUwELL1A_jYOUSRxJ5PApvulh3iudaPbEvslJKI-dCh0A/pub?output=csv&sheet=';
+  var SHEET_INFO = [
+    {name:'สำนักงาน',                 cat:'📋 1.สำนักงาน',              icon:'📄'},
+    {name:'งานบ้านงานครัว',           cat:'🧹 2.งานบ้าน',               icon:'🧹'},
+    {name:'สิ่งพิมพ์',                cat:'🖨️ 3.สิ่งพิมพ์',            icon:'🖨️'},
+    {name:'การแพทย์',                 cat:'🩺 4.การแพทย์',              icon:'🩺'},
+    {name:'วิทยาศาสตร์การแพทย์',     cat:'🔬 7.วิทยาศาสตร์การแพทย์', icon:'🔬'},
+    {name:'อื่นๆ',                    cat:'📦 5.อื่นๆ',                  icon:'📦'},
+    {name:'ไฟฟ้า',                    cat:'⚡ 6.ไฟฟ้า',                  icon:'⚡'},
+    {name:'Needle+Syringe+กล่องเข็ม', cat:'💉 8.เวชภัณฑ์มิใช่ยา',      icon:'💉'},
+    {name:'เวชภัณฑ์มิใช่ยา',          cat:'💉 8.เวชภัณฑ์มิใช่ยา',      icon:'💉'}
+  ];
+
+  var banner = document.getElementById('gs-status');
+  if (banner) { banner.style.display='flex'; banner.textContent='☁️ กำลังโหลดข้อมูลจาก Google Sheets...'; }
+
+  var promises = SHEET_INFO.map(function(sheet) {
+    return fetch(CSV_BASE + encodeURIComponent(sheet.name))
+      .then(function(r){ return r.text(); })
+      .then(function(csv) {
+        var rows = parseCSVToObjects(csv);
+        return rows.filter(function(row) {
+          return (row['code']||row['รหัส']||row['รหัสพัสดุ']||'').trim() !== '';
+        }).map(function(row) {
+          function g() {
+            for (var i=0;i<arguments.length;i++) {
+              var v=(row[arguments[i]]||'').trim(); if(v) return v;
+            }
+            return '';
+          }
+          var code   = g('code','รหัส','รหัสพัสดุ');
+          var name   = g('name','ชื่อ','ชื่อพัสดุ','ชื่อวัสดุ');
+          var cat    = g('cat','หมวด','หมวดหมู่') || sheet.cat;
+          var icon   = g('icon','ไอคอน') || sheet.icon;
+          var unit   = g('unit','หน่วย','หน่วยนับ');
+          var unitPk = g('unitpack','unit_pack','หน่วยต่อกล่อง') || '—';
+          var cur    = parseFloat(g('cur','จำนวน','คงเหลือ','จำนวนคงเหลือ'))||0;
+          var min    = parseFloat(g('min','ขั้นต่ำ','จำนวนขั้นต่ำ'))||0;
+          var max    = parseFloat(g('max','สูงสุด','จำนวนสูงสุด'))||0;
+          var loc    = g('loc','ที่เก็บ','สถานที่เก็บ','ที่จัดเก็บ') || 'ตู้พัสดุใหญ่';
+          var lot    = g('lot','ล็อต') || '—';
+          var recv   = g('recv','วันรับ','วันที่รับ') || '—';
+          var exp    = g('exp','วันหมดอายุ','exp date') || '—';
+          var imgUrl = g('imgurl','img_url','รูป','รูปภาพ');
+          var sts    = cur<=0?'rd':cur<=min?'wn':'ok';
+          return {
+            code:code, name:name, cat:cat, icon:icon,
+            unit:unit, unitPack:unitPk,
+            cur:cur, min:min, max:max, loc:loc,
+            status:sts, lot:lot, recv:recv, exp:exp, imgUrl:imgUrl,
+            lots:[{lot:lot,recv:recv,exp:exp,qty:cur}]
+          };
+        });
+      })
+      .catch(function(err){ console.log('โหลด sheet ไม่ได้:', sheet.name, err); return []; });
+  });
+
+  Promise.all(promises).then(function(results) {
+    var allItems=[], seen={};
+    results.forEach(function(items) {
+      items.forEach(function(item) {
+        if (item.code && !seen[item.code]) { seen[item.code]=true; allItems.push(item); }
       });
-      syncStockTable();
-      syncACLists();
-      updateDashStats();
-      updateDashLists();
-      if(banner) { banner.textContent='✅ โหลดข้อมูลจาก Google Sheets แล้ว (' + data.count + ' รายการ)'; }
-      setTimeout(function(){ if(banner) banner.style.display='none'; }, 3000);
-      console.log('✅ Loaded', data.count, 'items from Sheets');
-    })
-    .catch(function(err){
-      console.log('Sheets load error:', err);
-      if(banner) { banner.style.display='none'; }
     });
+    if (allItems.length === 0) {
+      console.log('ไม่พบข้อมูลจาก Sheets — ใช้ข้อมูลเดิม');
+      if (banner) banner.style.display='none';
+      return;
+    }
+    ITEMS.length=0;
+    allItems.forEach(function(item){ ITEMS.push(item); });
+    renderStockTable();
+    if (typeof syncACLists==='function') syncACLists();
+    updateDashStats();
+    updateDashLists();
+    filterStock();
+    if (banner) {
+      banner.textContent='✅ โหลดข้อมูลจาก Google Sheets แล้ว ('+allItems.length+' รายการ)';
+      setTimeout(function(){ banner.style.display='none'; },3000);
+    }
+    console.log('✅ โหลดสำเร็จ', allItems.length, 'รายการจาก CSV Sheets');
+  });
 }
 
 // ── บันทึก ITEMS ลง Google Sheets ──
