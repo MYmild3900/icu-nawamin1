@@ -4916,7 +4916,7 @@ function loadFromSheets() {
     }
     ITEMS.length=0;
     allItems.forEach(function(item){ ITEMS.push(item); });
-    if(typeof IMG_FB!=='undefined'){allItems.forEach(function(item){if(!item.imgUrl&&item.code&&IMG_FB[item.code])item.imgUrl=IMG_FB[item.code];});}
+    if(typeof IMG_FB!=='undefined'){allItems.forEach(function(item){if(item.code&&IMG_FB[item.code])item.imgUrl=IMG_FB[item.code];});}
     ITEMS.forEach(function(item){var s=item.code?localStorage.getItem('img_'+item.code):null;if(s)item.imgData=s;});
     renderStockTable();
     if (typeof syncACLists==='function') syncACLists();
