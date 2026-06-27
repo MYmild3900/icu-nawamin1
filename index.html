@@ -4799,6 +4799,7 @@ function parseCSVToObjects(text) {
   for(var i=headerIdx+1;i<records.length;i++){
     var cols=records[i], obj={};
     headers.forEach(function(h,idx){obj[h]=(cols[idx]||'').replace(/^"|"$/g,'').trim();});
+    if(!obj.code){var _k=Object.keys(obj).find(function(k){return k.includes('รหัสพัสดุ');});if(_k)obj.code=obj[_k];}
     out.push(obj);
   }
   return out;
