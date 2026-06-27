@@ -4777,9 +4777,17 @@ function parseCSVToObjects(text) {
     result.push(cur.trim());
     return result;
   }
-  var headers = splitRow(lines[0]).map(function(h){ return h.replace(/^"|"$/g,'').trim().toLowerCase(); });
+  // ข้ามแถวหัวตาราง — หาแถว header จริงๆ
+  var headerIdx = 0;
+  for (var i=0; i<Math.min(lines.length, 5); i++) {
+    var lc = lines[i].toLowerCase();
+    if (lc.includes('รหัสพัสดุ') || lc.includes('imgurl') || lc.includes('min stock') || lc.includes('code')) {
+      headerIdx = i; break;
+    }
+  }
+  var headers = splitRow(lines[headerIdx]).map(function(h){ return h.replace(/^"|"$/g,'').trim().toLowerCase(); });
   var out = [];
-  for (var i=1;i<lines.length;i++) {
+  for (var i=headerIdx+1;i<lines.length;i++) {
     var line=lines[i].trim(); if(!line) continue;
     var cols=splitRow(line), obj={};
     headers.forEach(function(h,idx){ obj[h]=(cols[idx]||'').replace(/^"|"$/g,'').trim(); });
@@ -4851,8 +4859,12 @@ function loadFromSheets() {
           return (row['code']||row['รหัส']||row['รหัสพัสดุ']||'').trim() !== '';
         }).map(function(row) {
           function g() {
+            var keys=Object.keys(row);
             for (var i=0;i<arguments.length;i++) {
-              var v=(row[arguments[i]]||'').trim(); if(v) return v;
+              var term=arguments[i];
+              if(row[term]!==undefined){var v=row[term].trim();if(v)return v;}
+              var k=keys.find(function(key){return key.includes(term);});
+              if(k){var v2=(row[k]||'').trim();if(v2)return v2;}
             }
             return '';
           }
@@ -4862,9 +4874,9 @@ function loadFromSheets() {
           var icon   = g('icon','ไอคอน') || sheet.icon;
           var unit   = g('unit','หน่วย','หน่วยนับ');
           var unitPk = g('unitpack','unit_pack','หน่วยต่อกล่อง') || '—';
-          var cur    = parseFloat(g('cur','จำนวน','คงเหลือ','จำนวนคงเหลือ'))||0;
-          var min    = parseFloat(g('min','ขั้นต่ำ','จำนวนขั้นต่ำ'))||0;
-          var max    = parseFloat(g('max','สูงสุด','จำนวนสูงสุด'))||0;
+          var cur    = parseFloat(g('คงเหลือ','cur','จำนวน'))||0;
+          var min    = parseFloat(g('min','ขั้นต่ำ'))||0;
+          var max    = parseFloat(g('max','สูงสุด'))||0;
           var loc    = g('loc','ที่เก็บ','สถานที่เก็บ','ที่จัดเก็บ') || 'ตู้พัสดุใหญ่';
           var lot    = g('lot','ล็อต') || '—';
           var recv   = g('recv','วันรับ','วันที่รับ') || '—';
