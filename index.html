@@ -3193,7 +3193,7 @@ function thaiDate(d){
 }
 
 // ── RECEIVE save ──
-function saveRecv(){
+(){
   const rows = document.querySelectorAll('#rrows .rrow');
   let saved = 0;
   let errors = [];
@@ -3435,6 +3435,57 @@ function saveWd(){
     if(lo){ lo.style.background='var(--bl)'; }
   });
   if(wbtn){ wbtn.disabled=false; wbtn.textContent='💾 บันทึกเบิก'; }
+  renderHist();
+}
+  function saveRecv(){
+  const GS_URL = 'https://script.google.com/macros/s/AKfycbwkeAJyZO68D0JIgSgto2rOHkI-Fnew6-OfEH-AApF340eHYcziAlHd3mcJMFKz2Ns/exec';
+  const user = document.getElementById('sbn').textContent || 'พยาบาล';
+  const now  = new Date();
+  const recvDateEl = document.querySelector('#pg-recv input[type=date]');
+  const recvDate = recvDateEl ? recvDateEl.value : thaiDate(now);
+  let saved = 0;
+
+  document.querySelectorAll('#pg-recv .rrow').forEach(row => {
+    const nameInp = row.querySelector('input[type=text]');
+    const qtyInp  = row.querySelector('.recv-qty') || row.querySelector('input[type=number]');
+    const lotInp  = row.querySelectorAll('input[type=text]')[1];
+    const expInp  = row.querySelector('input[type=date]');
+    if (!nameInp || !qtyInp) return;
+    const name = nameInp.value.trim();
+    const qty  = parseInt(qtyInp.value) || 0;
+    if (!name || qty <= 0) return;
+    const lot = lotInp ? lotInp.value.trim() || '—' : '—';
+    const exp = expInp ? expInp.value : '';
+    const item = ITEMS.find(i => i.name === name || i.code === name ||
+      i.name.toLowerCase().includes(name.toLowerCase()) ||
+      name.toLowerCase().includes(i.name.toLowerCase()));
+    const code = item ? item.code : '—';
+    const unit = item ? item.unit : '';
+    const oldStock = item ? (item.cur || 0) : 0;
+    const newStock = oldStock + qty;
+    if (item) item.cur = newStock;
+    TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'recv', name, code, lot, qty, unit, oldStock, newStock, user });
+    fetch(GS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ date: recvDate, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' })
+    }).catch(function(){});
+    saved++;
+  });
+
+  if (saved === 0) { alert('กรุณาเลือกพัสดุและกรอกจำนวนก่อนบันทึกค่ะ'); return; }
+  updateDashStats(); syncACLists(); syncStockTable(); updateDashSummary(); updateDashLists();
+  saveToSheets();
+  const rbtn = document.querySelector('#pg-recv .btn.sv');
+  if(rbtn){ rbtn.disabled=true; rbtn.textContent='✅ บันทึกแล้ว'; }
+  alert('✅ บันทึกรับพัสดุ ' + saved + ' รายการเรียบร้อยแล้วค่ะ!\n📦 ประวัติอัปเดตแล้วค่ะ 😊');
+  document.querySelectorAll('#pg-recv .rrow').forEach(r => {
+    const ni = r.querySelector('input[type=text]'); if(ni) ni.value='';
+    const qi = r.querySelector('.recv-qty,input[type=number]'); if(qi) qi.value='';
+    const li = r.querySelectorAll('input[type=text]')[1]; if(li) li.value='';
+    const ei = r.querySelector('input[type=date]'); if(ei) ei.value='';
+  });
+  if(rbtn){ rbtn.disabled=false; rbtn.textContent='💾 บันทึกรับพัสดุ'; }
   renderHist();
 }
 function clearWd(){
