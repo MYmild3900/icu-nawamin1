@@ -2105,6 +2105,7 @@ tr:hover td{background:var(--wh)}
   <!-- HISTORY -->
   <div id="pg-hist" class="pg">
     <div class="ps">บันทึกการรับเข้า / เบิกออกทั้งหมด — อัปเดต Real-time</div>
+    <button class="btn" onclick="loadHistFromSheets()" style="margin-bottom:8px;background:var(--g5);color:white">🔄 โหลดประวัติจาก Sheets</button>
     <div class="card">
       <div class="bar">
         <select class="sel" id="hist-type-sel" onchange="renderHist()">
@@ -3406,6 +3407,10 @@ function saveWd(){
       oldStock, newStock,
       user
     });
+    fetch('https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec', {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ date: thaiDate(now), type: 'เบิกออก', code, name, qty, remaining: newStock, lot, user, note: '' })
+    }).catch(function(){});
     saved++;
   });
 
@@ -3438,7 +3443,7 @@ function saveWd(){
   renderHist();
 }
   function saveRecv(){
-  const GS_URL = 'https://script.google.com/macros/s/AKfycbxVnxZiyeHPghgO7PLGrmROEAGHOYdwp8-L8eC3ys_re_MKUbqZgXb8Yn9foHYtFUoXVg/exec';
+  const GS_URL = 'https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec';
   const user = document.getElementById('sbn').textContent || 'พยาบาล';
   const now  = new Date();
   const recvDateEl = document.querySelector('#pg-recv input[type=date]');
@@ -3569,6 +3574,29 @@ function filterByStatus(val) {
   applyStockFilter(f);
 }
 
+  function loadHistFromSheets(){
+  const GS_URL = 'https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec';
+  fetch(GS_URL + '?action=history')
+    .then(function(r){ return r.json(); })
+    .then(function(rows){
+      if (!Array.isArray(rows) || rows.length === 0) return;
+      TXLOG = rows.map(function(row){
+        return {
+          date: row['วันที่'] || '',
+          type: row['ประเภท'] === 'รับเข้า' ? 'recv' : 'wd',
+          name: row['ชื่อพัสดุ'] || '',
+          code: row['รหัสพัสดุ'] || '',
+          qty: parseFloat(row['จำนวน']) || 0,
+          newStock: parseFloat(row['คงเหลือ']) || 0,
+          lot: row['Lot/Serial'] || '—',
+          user: row['ผู้บันทึก'] || '',
+          unit: ''
+        };
+      });
+      renderHist();
+    })
+    .catch(function(err){ console.log('loadHist error:', err); });
+}
 // ── RENDER HISTORY ──
 function renderHist(){
   const typeF  = (document.getElementById('hist-type-sel') || {}).value || 'all';
