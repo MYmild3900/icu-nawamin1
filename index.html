@@ -3438,7 +3438,7 @@ function saveWd(){
   renderHist();
 }
   function saveRecv(){
-  const GS_URL = 'https://script.google.com/macros/s/AKfycbwkeAJyZO68D0JIgSgto2rOHkI-Fnew6-OfEH-AApF340eHYcziAlHd3mcJMFKz2Ns/exec';
+  const GS_URL = 'https://script.google.com/macros/s/AKfycbxVnxZiyeHPghgO7PLGrmROEAGHOYdwp8-L8eC3ys_re_MKUbqZgXb8Yn9foHYtFUoXVg/exec';
   const user = document.getElementById('sbn').textContent || 'พยาบาล';
   const now  = new Date();
   const recvDateEl = document.querySelector('#pg-recv input[type=date]');
@@ -3467,7 +3467,7 @@ function saveWd(){
     TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'recv', name, code, lot, qty, unit, oldStock, newStock, user });
     fetch(GS_URL, {
       method: 'POST', mode: 'no-cors',
-      headers: {'Content-Type':'application/json'},
+      
       body: JSON.stringify({ date: recvDate, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' })
     }).catch(function(){});
     saved++;
