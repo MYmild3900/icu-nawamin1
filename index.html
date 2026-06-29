@@ -2265,7 +2265,7 @@ tr:hover td{background:var(--wh)}
     <div class="ps">นำเข้าข้อมูลจาก Excel หรือ Google Sheets</div>
     <div class="card">
       <div style="display:flex;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--g1)">
-        <button class="btn pr sm">📄 อัปโหลด Excel</button><button class="btn sm">🔗 Google Sheets</button>
+        <button class="btn pr sm">📄 อัปโหลด Excel</button><input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this.files[0])"><button class="btn sm">🔗 Google Sheets</button>
       </div>
       <div class="drop"><div style="font-size:36px;margin-bottom:8px">📂</div><h3>ลากไฟล์มาวางที่นี่</h3><p style="font-size:12px;color:var(--g4);margin:4px 0 12px">รองรับ .xlsx .xls .csv</p><button class="btn pr" onclick="document.getElementById('excel-file-input').click()">เลือกไฟล์</button></div>
     </div>
