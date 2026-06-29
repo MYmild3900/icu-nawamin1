@@ -4958,7 +4958,7 @@ function loadFromSheets() {
           }
           var code   = g('code','รหัส','รหัสพัสดุ');
           var name   = g('name','ชื่อ','ชื่อพัสดุ','ชื่อวัสดุ');
-          var cat    = g('cat','หมวด','หมวดหมู่') || sheet.cat;
+          var cat    = sheet.cat;
           var icon   = g('icon','ไอคอน') || sheet.icon;
           var unit   = g('unit','หน่วย','หน่วยนับ');
           var unitPk = g('unitpack','unit_pack','หน่วยต่อกล่อง') || '—';
