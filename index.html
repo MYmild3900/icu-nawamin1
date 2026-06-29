@@ -2451,9 +2451,9 @@ tr:hover td{background:var(--wh)}
       <button class="btn sm" onclick="cm('add-item-modal')">✕ ปิด</button>
     </div>
     <!-- รูปภาพ -->
-    <div class="eib" onclick="alert('เลือกรูปภาพพัสดุ (ฟีเจอร์เต็มใน Phase 2 ค่ะ)')" style="margin-bottom:12px">
+    <div class="eib" onclick="document.getElementById('add-img-file').click()" style="margin-bottom:12px">
       <span id="add-icon-preview" style="font-size:36px">📦</span>
-      <span style="font-size:12px;color:var(--g4)">คลิกเพื่อเพิ่มรูปภาพ (ไม่บังคับ)</span>
+      <span style="font-size:12px;color:var(--g4)">คลิกเพื่อเพิ่มรูปภาพ (ไม่บังคับ)</span><input type="file" id="add-img-file" accept="image/*" style="display:none" onchange="previewAddImg(this)">
     </div>
     <div class="fr two" style="margin-bottom:0">
       <div class="fg2"><label>รหัสพัสดุ *</label><input type="text" id="add-code" placeholder="เช่น M005, S002"></div>
@@ -4798,7 +4798,7 @@ function setEditIcon(emoji){
 }
 
 // ── เปลี่ยนรูปภาพจากหน้า QR ──
-function changeQRImg(input){
+function previewAddImg(input){         var file = input.files[0];         if(!file) return;         if(file.size > 2*1024*1024){ alert('รูปภาพต้องมีขนาดไม่เกิน 2MB ค่ะ'); return; }         var reader = new FileReader();         reader.onload = function(e){           var span = document.getElementById('add-icon-preview');           if(span){ span.innerHTML='<img src="'+e.target.result+'" style="width:60px;height:60px;object-fit:cover;border-radius:8px">'; span._imgData=e.target.result; }         };         reader.readAsDataURL(file);       }       function changeQRImg(input){
   var file = input.files[0];
   if(!file) return;
   if(file.size > 2*1024*1024){ alert('รูปภาพต้องมีขนาดไม่เกิน 2MB ค่ะ'); return; }
