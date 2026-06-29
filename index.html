@@ -4359,7 +4359,7 @@ function saveNewItem(){
     code:code, name:name, cat:cat, icon:icon, unit:unit, unitPack:'—',
     cur:cur, min:min, max:max, loc:loc, status:status,
     lot:lot, recv:recv||'—', exp:exp||'—',
-    lots:[{lot:lot, recv:recv||'—', exp:exp||'—', qty:cur}]
+    imgUrl:(document.getElementById('add-icon-preview')||{})._imgData||'',        lots:[{lot:lot, recv:recv||'—', exp:exp||'—', qty:cur}]
   };
   ITEMS.push(newItem);
 
@@ -4373,7 +4373,7 @@ function saveNewItem(){
     tr.setAttribute('data-status', status);
     tr.setAttribute('data-cat', cat.toLowerCase());
     tr.innerHTML =
-      '<td><div class="ii">'+icon+'</div></td>'+
+      '<td>'+(newItem.imgUrl?'<div class="ii" style="background-image:url('+newItem.imgUrl+');background-size:cover;background-position:center;width:36px;height:36px;border-radius:6px;font-size:0"></div>':'<div class="ii">'+icon+'</div>')+'</td>'+
       '<td><span class="cb">'+code+'</span></td>'+
       '<td>'+name+'</td>'+
       '<td><span class="cat">'+cat+'</span></td>'+
@@ -4798,7 +4798,7 @@ function setEditIcon(emoji){
 }
 
 // ── เปลี่ยนรูปภาพจากหน้า QR ──
-function previewAddImg(input){         var file = input.files[0];         if(!file) return;         if(file.size > 2*1024*1024){ alert('รูปภาพต้องมีขนาดไม่เกิน 2MB ค่ะ'); return; }         var reader = new FileReader();         reader.onload = function(e){           var span = document.getElementById('add-icon-preview');           if(span){ span.innerHTML='<img src="'+e.target.result+'" style="width:60px;height:60px;object-fit:cover;border-radius:8px">'; span._imgData=e.target.result; }         };         reader.readAsDataURL(file);       }       function changeQRImg(input){
+function previewAddImg(input){         var file = input.files[0];         if(!file) return;         if(file.size > 2*1024*1024){ alert('รูปภาพต้องมีขนาดไม่เกิน 2MB ค่ะ'); return; }         var reader = new FileReader();         reader.onload = function(e){           var span = document.getElementById('add-icon-preview');           if(span){ var i2=new Image();i2.onload=function(){var M=120,w=i2.width,h=i2.height;if(w>h){if(w>M){h=h*M/w;w=M;}}else{if(h>M){w=w*M/h;h=M;}}var cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(i2,0,0,w,h);var c=cv.toDataURL('image/jpeg',0.7);span.style.fontSize='0';span.innerHTML='<img src="'+c+'" style="width:60px;height:60px;object-fit:cover;border-radius:8px">';span._imgData=c;};i2.src=e.target.result; }         };         reader.readAsDataURL(file);       }       function changeQRImg(input){
   var file = input.files[0];
   if(!file) return;
   if(file.size > 2*1024*1024){ alert('รูปภาพต้องมีขนาดไม่เกิน 2MB ค่ะ'); return; }
