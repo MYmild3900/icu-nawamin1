@@ -451,7 +451,6 @@ tr:hover td{background:var(--wh)}
   <div id="pg-dash" class="pg on">
     <div class="ps">ภาพรวมสถานะพัสดุ ICU นวมินทร์ 1</div>
     <div class="qs">
-      <div class="qst">🔍 ค้นหาด่วน (Quick Search)</div>
       <div class="qsr">
         <div class="ac-wrap" style="flex:1;position:relative">
           <input class="qsi" id="qin" type="text" placeholder="พิมพ์ชื่อหรือรหัสพัสดุ..."
@@ -2659,7 +2658,7 @@ function go(id,el){
   if(id==='cfg') setTimeout(renderStaffTable,50);
   if(id==='dash') setTimeout(function(){ updateDashStats(); updateDashLists(); },50);
 }
-function doQS(v){document.getElementById('qres').style.display=v.trim().length>0?'block':'none'}
+function doQS(v){   var el=document.getElementById('qres');if(!el)return;   v=(v||'').trim();   if(v.length===0){renderQRes(getDefaultQSItems());}   else{     var q=v.toLowerCase();     var res=ITEMS.filter(function(i){return i.name.toLowerCase().includes(q)||(i.code||'').toLowerCase().includes(q);});     renderQRes(res.slice(0,6));   }   el.style.display='block'; } function getDefaultQSItems(){   return ITEMS.slice().sort(function(a,b){var o={rd:0,pk:1,wn:2,ok:3};return(o[a.status]||3)-(o[b.status]||3);}).slice(0,3); } function renderQRes(items){   var el=document.getElementById('qres');if(!el)return;   if(!items||items.length===0){el.innerHTML='<div style="padding:12px;text-align:center;color:var(--g4);font-size:12px">ไม่พบพัสดุค่ะ</div>';return;}   el.innerHTML=items.map(function(item){     var stsCls=item.status==='rd'?'sr':item.status==='pk'?'sp':item.status==='wn'?'sw2':'so';     var stsLbl=item.status==='rd'?'หมดแล้ว 🚫':item.status==='pk'?'หมดอายุ 😱':item.status==='wn'?'ใกล้หมด ⚠️':'ปกติ ✅';     return '<div class="qsi2" onclick="pickDashItem(\''+item.code+'\')" style="cursor:pointer">'       +'<div class="qi">📦</div>'       +'<div style="flex:1"><div style="font-weight:600;color:var(--nv);font-size:12px">'+item.name+'</div>'       +'<div style="font-size:10px;color:var(--g4)">'+item.code+' · '+(item.cat||'')+'</div></div>'       +'<span class="sts '+stsCls+'">'+stsLbl+' · '+(item.cur||0)+' '+item.unit+'</span>'       +'</div>';   }).join(''); } function pickDashItem(code){   var item=ITEMS.find(function(i){return i.code===code;});if(!item)return;   document.getElementById('qin').value=item.name;   showDashAC(item.name); }
 // ── ITEM DATABASE ──
 const ITEMS = [
   {code:'60101009',name:'กระดาษคาร์บอนสีน้ำเงิน',cat:'📋 1.สำนักงาน',icon:'📄',unit:'แผ่น',unitPack:'—',cur:5,min:5,max:20,loc:'ตู้พัสดุใหญ่',status:'wn',lot:'—',recv:'—',exp:'—',imgUrl:'https://s.alicdn.com/@sc04/kf/H87d43e31afbe4e829cefd0cfcca68393w.jpg_300x300.jpg',lots:[{lot:'—',recv:'—',exp:'—',qty:5}]},
@@ -4652,6 +4651,7 @@ function selectHistItem(el, name){
 
 // ── อัปเดต dashboard top5 และ urgent จาก ITEMS จริง ──
 function updateDashLists(){
+  doQS('');
   // Urgent list
   var urgentEl = document.getElementById('dash-urgent-list');
   if(urgentEl){
