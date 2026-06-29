@@ -3068,7 +3068,7 @@ function showQRCode(code,name){
   try{
     new QRCode(div,{text:code+'|'+name,width:160,height:160,colorDark:'#032A42',colorLight:'#ffffff'});
   }catch(e){
-    div.innerHTML='<div style="width:160px;height:160px;background:#f0f0dc;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6e6357;border-radius:8px">QR: '+code+'</div>';
+    div.innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(code)+'" width="160" height="160" style="border-radius:6px">';;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6e6357;border-radius:8px">QR: '+code+'</div>';
   }
   document.getElementById('qrm').classList.add('show');
 }
