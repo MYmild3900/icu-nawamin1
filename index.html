@@ -4361,7 +4361,7 @@ function saveNewItem(){
     lot:lot, recv:recv||'—', exp:exp||'—',
     imgUrl:(document.getElementById('add-icon-preview')||{})._imgData||'',        lots:[{lot:lot, recv:recv||'—', exp:exp||'—', qty:cur}]
   };
-  ITEMS.push(newItem);        if(typeof GS_URL!=='undefined'&&GS_URL){var s2=ITEMS.map(function(it){return{code:it.code,name:it.name,cat:it.cat,icon:it.icon||'📦',unit:it.unit,cur:it.cur||0,min:it.min||0,max:it.max||0,loc:it.loc||'',lot:it.lot||'-',recv:it.recv||'-',exp:it.exp||'-',imgUrl:it.imgUrl||it.imgData||'',status:it.status||'ok'};});fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveItems',items:s2})});}
+  ITEMS.push(newItem);        (function(it){return{code:it.code,name:it.name,cat:it.cat,icon:it.icon||'📦',unit:it.unit,cur:it.cur||0,min:it.min||0,max:it.max||0,loc:it.loc||'',lot:it.lot||'-',recv:it.recv||'-',exp:it.exp||'-',imgUrl:it.imgUrl||it.imgData||'',status:it.status||'ok'};});fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'saveItems',items:s2})});}
 
   // เพิ่มแถวในตาราง
   var tbody = document.getElementById('stock-tbody');
