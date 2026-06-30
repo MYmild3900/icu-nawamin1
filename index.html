@@ -4361,7 +4361,7 @@ function saveNewItem(){
     lot:lot, recv:recv||'—', exp:exp||'—',
     imgUrl:(document.getElementById('add-icon-preview')||{})._imgData||'',        lots:[{lot:lot, recv:recv||'—', exp:exp||'—', qty:cur}]
   };
-  ITEMS.push(newItem);
+  ITEMS.push(newItem);if(typeof GS_URL!=='undefined'&&GS_URL){fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addItem',item:newItem})});}
 
   // เพิ่มแถวในตาราง
   var tbody = document.getElementById('stock-tbody');
