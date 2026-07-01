@@ -3474,6 +3474,7 @@ function saveWd(){
       
       body: JSON.stringify({ date: recvDate, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' })
     }).catch(function(){});
+    if (item) { fetch('https://...main GS_URL.../exec', { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'addLot', item: { code, name, cat: item.cat||'', unit, min: item.min||0, max: item.max||0, qty, loc: item.loc||'', lot, recv: recvDate, exp } }) }).catch(function(){}); }
     saved++;
   });
 
