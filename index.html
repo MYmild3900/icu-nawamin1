@@ -5027,17 +5027,10 @@ function handleExcelUpload(file){   if(!file) return;   var reader = new FileRea
     };
   });
 
-  fetch(GS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'saveItems', items: itemsToSave })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data){
-    if(data.ok) console.log('✅ Saved', data.saved, 'items to Sheets');
-    else console.log('Save error:', data.error);
-  })
-  .catch(function(err){ console.log('Save error:', err); });
+ fetch('https://script.google.com/macros/s/AKfycbw2BDjDmTe6T3vJQOJcFlTZveHC7f4RCuYhCB0EwIYAS4zTRPyi6bSKGnxdI8C3B64z/exec', {
+      method: 'POST', mode: 'no-cors',
+      body: JSON.stringify({ action: 'saveItems', items: itemsToSave })
+    }).catch(function(err){ console.log('Save error:', err); });
 }
 
 // ── บันทึก Transaction Log ลง Sheets ──
