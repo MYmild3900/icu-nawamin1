@@ -5036,13 +5036,11 @@ function handleExcelUpload(file){   if(!file) return;   var reader = new FileRea
 // ── บันทึก Transaction Log ลง Sheets ──
 function logToSheets(txData) {
   if(!GS_ENABLED) return;
-  fetch(GS_URL, {
+  
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    mode: 'no-cors',
     body: JSON.stringify({ action: 'addLog', log: txData })
   })
-  .then(function(r){ return r.json(); })
-  .then(function(data){ if(data.ok) console.log('✅ Log saved to Sheets'); })
   .catch(function(err){ console.log('Log error:', err); });
 }
 function camAlert(){ /* ใช้ startQRScan แทนแล้ว */ }
