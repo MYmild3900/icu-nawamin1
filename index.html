@@ -4988,7 +4988,7 @@ function loadFromSheets() {
     var allItems=[], seen={};
     results.forEach(function(items) {
       items.forEach(function(item) {
-        if (item.code && item.code.length<=20) { if (!seen[item.code]) { seen[item.code] = allItems.length; allItems.push(item); } else { var ex = allItems[seen[item.code]]; ex.cur = (parseInt(ex.cur)||0) + (parseInt(item.cur)||0); if (item.lots && item.lots[0] && item.lots[0].lot !== '-') ex.lots.push(item.lots[0]); } }
+        if (item.code && item.code.length<=20) { if (!seen[item.code]) { seen[item.code] = allItems.length; allItems.push(item); } else { var ex = allItems[seen[item.code]];  if (item.lots && item.lots[0] && item.lots[0].lot !== '-') ex.lots.push(item.lots[0]); } }
       });
     });
     if (allItems.length === 0) {
