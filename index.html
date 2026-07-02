@@ -5036,7 +5036,7 @@ function handleExcelUpload(file){   if(!file) return;   var reader = new FileRea
 // ── บันทึก Transaction Log ลง Sheets ──
 function logToSheets(txData) {
   if(!GS_ENABLED) return;
-  
+  fetch('https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec', {
     method: 'POST',
     mode: 'no-cors',
     body: JSON.stringify({ action: 'addLog', log: txData })
