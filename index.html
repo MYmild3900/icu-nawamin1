@@ -3474,7 +3474,7 @@ function saveWd(){
       
       body: JSON.stringify({ date: recvDate, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' })
     }).catch(function(){});
-    if (item) { fetch('https://script.google.com/macros/s/AKfycbw2BDjDmTe6T3vJQOJcFlTZveHC7f4RCuYhCB0EwIYAS4zTRPyi6bSKGnxdI8C3B64z/exec', { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'addLot', item: { code, name, cat: item.cat||'', unit, min: item.min||0, max: item.max||0, qty, loc: item.loc||'', lot, recv: recvDate, exp } }) }).catch(function(){}); }
+    if (item) { fetch('https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec', { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'addLot', item: { code, name, cat: item.cat||'', unit, min: item.min||0, max: item.max||0, qty, loc: item.loc||'', lot, recv: recvDate, exp } }) }).catch(function(){}); }
     saved++;
   });
 
@@ -5027,7 +5027,7 @@ function handleExcelUpload(file){   if(!file) return;   var reader = new FileRea
     };
   });
 
- fetch('https://script.google.com/macros/s/AKfycbw2BDjDmTe6T3vJQOJcFlTZveHC7f4RCuYhCB0EwIYAS4zTRPyi6bSKGnxdI8C3B64z/exec', {
+ fetch('https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec', {
       method: 'POST', mode: 'no-cors',
       body: JSON.stringify({ action: 'saveItems', items: itemsToSave })
     }).catch(function(err){ console.log('Save error:', err); });
