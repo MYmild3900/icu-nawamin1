@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
 <title>ระบบพัสดุ ICU นวมินทร์ 1</title>
+<meta name="apple-mobile-web-app-title" content="ระบบพัสดุ ICU 1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="application-name" content="ระบบพัสดุ ICU 1">
+<meta name="theme-color" content="#1b2a4a">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
@@ -367,6 +371,7 @@ tr:hover td{background:var(--wh)}
   <script src="img_fb.js"></script>
 </head>
 <body>
+<div id="gs-status" style="display:none;position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:9999;padding:8px 18px;border-radius:20px;background:#2c3e50;color:#fff;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.25);align-items:center;gap:6px"></div>
 
 <div id="login">
   <div class="lbox">
@@ -551,14 +556,15 @@ tr:hover td{background:var(--wh)}
         <select id="stock-cat-sel" class="sel" onchange="filterStock()"
           style="min-width:160px">
           <option value="">ทุกหมวด</option>
-          <option value="สำนักงาน">📋 1.สำนักงาน</option>
-          <option value="งานบ้าน">🧹 2.งานบ้าน</option>
-          <option value="สิ่งพิมพ์">🖨️ 3.สิ่งพิมพ์</option>
-          <option value="การแพทย์">🩺 4.การแพทย์</option>
-          <option value="อื่นๆ">📦 5.อื่นๆ</option>
-          <option value="ไฟฟ้า">⚡ 6.ไฟฟ้า</option>
-          <option value="วิทยาศาสตร์">🔬 7.วิทยาศาสตร์การแพทย์</option>
-          <option value="เวชภัณฑ์">💊 8.เวชภัณฑ์มิใช่ยา</option>
+          <option value="📋 1.สำนักงาน">📋 1.สำนักงาน</option>
+          <option value="🧹 2.งานบ้าน">🧹 2.งานบ้าน</option>
+          <option value="🖨️ 3.สิ่งพิมพ์">🖨️ 3.สิ่งพิมพ์</option>
+          <option value="🩺 4.การแพทย์">🩺 4.การแพทย์</option>
+          <option value="📦 5.อื่นๆ">📦 5.อื่นๆ</option>
+          <option value="⚡ 6.ไฟฟ้า">⚡ 6.ไฟฟ้า</option>
+          <option value="🔬 7.วิทยาศาสตร์การแพทย์">🔬 7.วิทยาศาสตร์การแพทย์</option>
+          <option value="💉 8.เวชภัณฑ์มิใช่ยา">💉 8.เวชภัณฑ์มิใช่ยา</option>
+          <option value="💉 9.Needle+Syringe">💉 9.Needle+Syringe</option>
         </select>
         <!-- ③ สถานะ -->
         <select id="stock-sts-sel" class="sel" onchange="filterStock()"
@@ -2094,6 +2100,11 @@ tr:hover td{background:var(--wh)}
           </div>
           <button class="btn sm" style="color:var(--rd-t);align-self:end;height:36px" onclick="this.closest('.wd-item-row').remove()">🗑</button>
         </div>
+        <div class="lot-select-wrap" style="display:none">
+          <div style="font-size:11px;font-weight:600;color:var(--nv);margin-bottom:6px">🏷️ เลือก Lot <span style="font-weight:400;color:var(--g4)">(FIFO — ใช้ลำดับที่ 1 ก่อน)</span></div>
+          <div class="lot-options-list"></div>
+          <div class="poka-warn"><span style="font-size:14px;flex-shrink:0">⚠️</span><div><b>เลือก Lot ไม่ตรง FIFO</b><br><span class="poka-warn-msg"></span></div></div>
+        </div>
       </div>
       <button class="btn sm" style="margin-top:6px" onclick="addWdRow()">+ เพิ่มรายการ</button>
       <div class="ht">📦 FIFO (First In First Out) — รับเข้าก่อน ใช้ก่อนเสมอ</div>
@@ -2115,6 +2126,7 @@ tr:hover td{background:var(--wh)}
         <div style="display:flex;gap:6px;flex:1;min-width:180px">
           <div class="ac-wrap" style="flex:1;position:relative">
             <input type="text" id="hist-search" placeholder="🔍 ค้นหาพัสดุ..." oninput="showHistAC(this)" autocomplete="off"
+              onkeydown="if(event.key==='Enter')histSearchGo()"
               style="width:100%;border:1.5px solid var(--g2);border-radius:var(--r8);padding:7px 10px;font-size:12px;font-family:inherit;outline:none"
               onfocus="this.style.borderColor='var(--li)'" onblur="setTimeout(function(){document.getElementById('hist-ac').style.display='none'},200)">
             <div id="hist-ac" class="ac-list" style="max-height:200px;overflow-y:auto"></div>
@@ -2122,7 +2134,11 @@ tr:hover td{background:var(--wh)}
           <button onclick="startQRScan(this,'histsearch')" title="สแกน QR"
             style="flex-shrink:0;padding:7px 10px;background:var(--nv);color:#fff;border:none;border-radius:var(--r8);cursor:pointer;font-size:14px">📷</button>
         </div>
-        <button class="btn pr" onclick="renderHist()">🔍 ค้นหา</button>
+        <span style="font-size:12px;color:var(--g5)">จาก</span>
+        <input type="date" id="hist-from" class="sel" onchange="renderHist()">
+        <span style="font-size:12px;color:var(--g5)">ถึง</span>
+        <input type="date" id="hist-to" class="sel" onchange="renderHist()">
+        <button class="btn" onclick="clearHistFilter()">🔄 ล้างตัวกรอง</button>
         <button class="btn" onclick="exportHist()">📄 Export CSV</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap" id="hist-summary"></div>
@@ -2174,40 +2190,6 @@ tr:hover td{background:var(--wh)}
           <div class="srow"><span>เบิกออกทั้งหมด</span><span id="rpt-wd-count" class="sv" style="color:var(--nv)">0</span></div>
           <div class="srow"><span>รายการในช่วงนี้</span><span id="rpt-total" class="sv" style="color:var(--g7)">0</span></div>
           <div class="srow"><span>พัสดุที่เบิก (ประเภท)</span><span id="rpt-types" class="sv" style="color:var(--li)">0</span></div>
-        </div>
-      </div>
-    </div>
-    <!-- Tab รายพัสดุ -->
-    <div style="display:flex;gap:4px;margin-top:14px;border-bottom:1px solid var(--g2);padding-bottom:0">
-      <div class="rpt-tab on" onclick="switchRpt('sum',this)" style="padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid var(--nv);color:var(--nv);margin-bottom:-1px">📊 ภาพรวม</div>
-      <div class="rpt-tab" onclick="switchRpt('item',this)" style="padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;color:var(--g4);margin-bottom:-1px">📦 รายงานรายพัสดุ</div>
-    </div>
-    <div id="rpt-sum" style="margin-top:12px"></div>
-    <div id="rpt-item" style="display:none;margin-top:12px">
-      <div class="card" style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:600;color:var(--nv);margin-bottom:8px">เลือกพัสดุที่ต้องการดูรายงาน</div>
-        <div class="ac-wrap" style="max-width:400px">
-          <input type="text" id="rpt-search" placeholder="พิมพ์ชื่อหรือรหัสพัสดุ..." oninput="showRptAC(this)" autocomplete="off"
-            style="width:100%;border:1px solid var(--g2);border-radius:var(--r8);padding:8px 12px;font-size:13px;font-family:inherit;outline:none">
-          <div class="ac-list" id="rpt-ac"></div>
-        </div>
-      </div>
-      <div id="rpt-item-result" style="display:none">
-        <div class="dg" style="margin-bottom:12px">
-          <div class="card">
-            <div class="ct2">📦 <span id="ri-name"></span></div>
-            <div class="ri-grid">
-              <div class="ri-card"><div class="ri-lbl">คงเหลือปัจจุบัน</div><div class="ri-val" id="ri-cur" style="color:var(--ok-t)"></div></div>
-              <div class="ri-card"><div class="ri-lbl">Min / Max Stock</div><div class="ri-val" id="ri-mm" style="color:var(--nv);font-size:13px"></div></div>
-              <div class="ri-card"><div class="ri-lbl">รับเข้าในระบบ</div><div class="ri-val" id="ri-recv-c" style="color:var(--ok-t)">0</div></div>
-              <div class="ri-card"><div class="ri-lbl">เบิกออกในระบบ</div><div class="ri-val" id="ri-wd-c" style="color:var(--wn-t)">0</div></div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="ct2">📋 ประวัติการเคลื่อนไหว</div>
-            <table><thead><tr><th>วันที่</th><th>ประเภท</th><th>จำนวน</th><th>Lot</th><th>คงเหลือ</th></tr></thead>
-            <tbody id="ri-tbody"><tr><td colspan="5" style="text-align:center;color:var(--g4);padding:16px">ยังไม่มีรายการค่ะ</td></tr></tbody></table>
-          </div>
         </div>
       </div>
     </div>
@@ -2470,7 +2452,8 @@ tr:hover td{background:var(--wh)}
           <option value="📦 5.อื่นๆ">📦 5.อื่นๆ</option>
           <option value="⚡ 6.ไฟฟ้า">⚡ 6.ไฟฟ้า</option>
           <option value="🔬 7.วิทยาศาสตร์การแพทย์">🔬 7.วิทยาศาสตร์การแพทย์</option>
-          <option value="💊 8.เวชภัณฑ์มิใช่ยา">💊 8.เวชภัณฑ์มิใช่ยา</option>
+          <option value="💉 8.เวชภัณฑ์มิใช่ยา">💉 8.เวชภัณฑ์มิใช่ยา</option>
+          <option value="💉 9.Needle+Syringe">💉 9.Needle+Syringe</option>
         </select>
       </div>
       <div class="fg2"><label>หน่วยนับ *</label><input type="text" id="add-unit" placeholder="เช่น ชิ้น กล่อง ขวด"></div>
@@ -2575,7 +2558,8 @@ tr:hover td{background:var(--wh)}
           <option value="📦 5.อื่นๆ">📦 5.อื่นๆ</option>
           <option value="⚡ 6.ไฟฟ้า">⚡ 6.ไฟฟ้า</option>
           <option value="🔬 7.วิทยาศาสตร์การแพทย์">🔬 7.วิทยาศาสตร์การแพทย์</option>
-          <option value="💊 8.เวชภัณฑ์มิใช่ยา">💊 8.เวชภัณฑ์มิใช่ยา</option>
+          <option value="💉 8.เวชภัณฑ์มิใช่ยา">💉 8.เวชภัณฑ์มิใช่ยา</option>
+          <option value="💉 9.Needle+Syringe">💉 9.Needle+Syringe</option>
         </select>
       </div>
       <div class="fg2"><label>หน่วยนับ *</label><input type="text" id="eunit" placeholder="ชิ้น กล่อง ขวด" style="width:100%;border:1px solid var(--g2);border-radius:var(--r8);padding:8px 10px;font-size:13px;font-family:inherit"></div>
@@ -3374,6 +3358,7 @@ function saveWd(){
   const user = document.getElementById('sbn').textContent || 'พยาบาล';
   const now  = new Date();
   let saved  = 0;
+  const syncPromises = [];
 
   // หาแถวเบิกทั้งหมด
   document.querySelectorAll('#pg-wd .wd-qty').forEach(qtyInp => {
@@ -3389,7 +3374,9 @@ function saveWd(){
     const qty  = parseInt(qtyInp.value) || 0;
     if (qty <= 0) return;
 
-    var lot = container.dataset.selectedLot || '—';
+    // lot ที่เลือกถูกเก็บไว้ที่ .wd-item-row (ไม่ใช่ div ชั้นใน)
+    var lotRowEl = qtyInp.closest('.wd-item-row');
+    var lot = (lotRowEl && lotRowEl.dataset.selectedLot) || container.dataset.selectedLot || '—';
     const unitEl = container.querySelector('.wd-unit');
     const item  = ITEMS.find(i => i.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(i.name.toLowerCase()));
     const code  = item ? item.code : '—';
@@ -3406,10 +3393,30 @@ function saveWd(){
       oldStock, newStock,
       user
     });
-    fetch('https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec', {
-      method: 'POST', mode: 'no-cors',
+    syncPromises.push(fetch(GS_HISTORY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ date: thaiDate(now), type: 'เบิกออก', code, name, qty, remaining: newStock, lot, user, note: '' })
-    }).catch(function(){});
+    }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+    // อัปเดตยอดคงเหลือในแถวเดิมของชีตหมวด (ไม่แทรกแถว)
+    if (item && item.code && item.code !== '—') {
+      syncPromises.push(fetch(GS_ITEMS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'updateStock', code: item.code, cur: newStock })
+      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      // ตัดยอด lot ที่เลือกในทะเบียน lot (tab Lot)
+      syncPromises.push(fetch(GS_ITEMS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'deductLot', code: item.code, lot: lot, qty: qty })
+      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
+      if (exL) {
+        exL.qty = Math.max(0, (parseFloat(exL.qty)||0) - qty);
+        if (exL.qty <= 0) item.lots = item.lots.filter(function(L){ return L !== exL; });
+      }
+    }
     saved++;
   });
 
@@ -3425,29 +3432,51 @@ function saveWd(){
   TXLOG.forEach(function(tx){ if(tx._new){ logToSheets(tx); tx._new=false; } });
 
   const wbtn = document.querySelector('#pg-wd .btn.wn');
-  if(wbtn){ wbtn.disabled=true; wbtn.textContent='✅ บันทึกแล้ว'; }
-  alert('✅ บันทึกเบิกพัสดุ ' + saved + ' รายการเรียบร้อยแล้วค่ะ!\n💊 ประวัติอัปเดตแล้วค่ะ 😊');
+  if(wbtn){ wbtn.disabled=true; wbtn.textContent='⏳ กำลังบันทึก...'; }
 
-  // ล้างฟอร์ม
-  const wdRows = document.querySelectorAll('#pg-wd .wd-item-row');
-  wdRows.forEach(r => {
-    const ni = r.querySelector('.wd-name-inp'); if(ni) ni.value='';
-    const lv = r.querySelector('.wd-lot-val');  if(lv) lv.textContent='—';
-    const cu = r.querySelector('.wd-current');  if(cu){ cu.textContent='—'; cu.style.background='var(--ok-b)'; cu.style.color='var(--ok-t)'; }
-    const qu = r.querySelector('.wd-qty');       if(qu) qu.value='';
-    const lo = r.querySelector('.wd-lot');
-    if(lo){ lo.style.background='var(--bl)'; }
+  Promise.all(syncPromises).then(function(results){
+    var failed = results.filter(function(ok){ return !ok; }).length;
+    if (failed === 0) {
+      alert('✅ บันทึกเบิกพัสดุ ' + saved + ' รายการเรียบร้อยแล้วค่ะ!\n💊 ประวัติอัปเดตแล้วค่ะ 😊');
+    } else {
+      alert('⚠️ บันทึกในแอปแล้ว ' + saved + ' รายการ แต่ส่งขึ้น Google Sheets ไม่สำเร็จ ' + failed + ' รายการค่ะ\nอย่ากดบันทึกซ้ำนะคะ (ยอดจะถูกหักซ้ำ) — กรุณาตรวจอินเทอร์เน็ตหรือแจ้งผู้ดูแลระบบ ประวัติใน Sheets อาจไม่ครบค่ะ');
+    }
+
+    // ล้างฟอร์มทั้งหมด — เหลือแถวเปล่าแถวเดียว และเอาข้อมูลรายการที่ทำไปแล้วออกให้หมด
+    const wdRows = document.querySelectorAll('#pg-wd .wd-item-row');
+    wdRows.forEach((r, i) => {
+      if (i > 0) { r.remove(); return; }   // แถวเสริมที่กดเพิ่มไว้ ให้ลบทิ้ง
+      const ni = r.querySelector('.wd-name-inp'); if(ni) ni.value='';
+      const lv = r.querySelector('.wd-lot-val');  if(lv) lv.textContent='—';
+      const cu = r.querySelector('.wd-current');  if(cu){ cu.textContent='—'; cu.style.background='var(--ok-b)'; cu.style.color='var(--ok-t)'; }
+      const qu = r.querySelector('.wd-qty');       if(qu) qu.value='';
+      const lo = r.querySelector('.wd-lot');
+      if(lo){ lo.style.background='var(--bl)'; }
+      // ซ่อนกล่องเลือก lot ของรายการที่บันทึกไปแล้ว
+      const lw = r.querySelector('.lot-select-wrap');
+      if(lw){ lw.style.display='none'; const ll=lw.querySelector('.lot-options-list'); if(ll) ll.innerHTML=''; const pw=lw.querySelector('.poka-warn'); if(pw) pw.classList.remove('show'); }
+      delete r.dataset.selectedLot; delete r.dataset.selectedLotIdx;
+    });
+    const wdNote = document.querySelector('#pg-wd .fr.two input[type=text]');
+    if (wdNote) wdNote.value='';
+    if(wbtn){ wbtn.disabled=false; wbtn.textContent='💾 บันทึกเบิก'; }
+    renderHist();
   });
-  if(wbtn){ wbtn.disabled=false; wbtn.textContent='💾 บันทึกเบิก'; }
-  renderHist();
 }
   function saveRecv(){
-  const GS_URL = 'https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec';
   const user = document.getElementById('sbn').textContent || 'พยาบาล';
   const now  = new Date();
   const recvDateEl = document.querySelector('#pg-recv input[type=date]');
   const recvDate = recvDateEl ? recvDateEl.value : thaiDate(now);
+  // วันที่ลงชีตประวัติ ใช้ format ไทยเดียวกับฝั่งเบิกออก (เลือกวันนี้ = ใส่เวลาจริงด้วย)
+  const recvDateTh = (function(){
+    if (!recvDateEl || !recvDateEl.value) return thaiDate(now);
+    if (recvDateEl.value === now.toISOString().split('T')[0]) return thaiDate(now);
+    var d = new Date(recvDateEl.value + 'T00:00:00');
+    return isNaN(d) ? thaiDate(now) : thaiDate(d);
+  })();
   let saved = 0;
+  const syncPromises = [];
 
   document.querySelectorAll('#pg-recv .rrow').forEach(row => {
     const nameInp = row.querySelector('input[type=text]');
@@ -3469,12 +3498,28 @@ function saveWd(){
     const newStock = oldStock + qty;
     if (item) item.cur = newStock;
     TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'recv', name, code, lot, qty, unit, oldStock, newStock, user });
-    fetch(GS_URL, {
-      method: 'POST', mode: 'no-cors',
-      
-      body: JSON.stringify({ date: recvDate, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' })
-    }).catch(function(){});
-    if (item) { fetch('https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec', { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'addLot', item: { code, name, cat: item.cat||'', unit, min: item.min||0, max: item.max||0, qty, loc: item.loc||'', lot, recv: recvDate, exp } }) }).catch(function(){}); }
+    syncPromises.push(fetch(GS_HISTORY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ date: recvDateTh, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' })
+    }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+    // อัปเดตยอดคงเหลือในแถวเดิมของชีตหมวด (ไม่แทรกแถว)
+    if (item && item.code && item.code !== '—') {
+      syncPromises.push(fetch(GS_ITEMS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'updateStock', code: item.code, cur: newStock })
+      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      // เพิ่ม/บวกยอด lot ในทะเบียน lot (tab Lot — แถวใหม่เกิดเฉพาะใน tab นี้)
+      syncPromises.push(fetch(GS_ITEMS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'upsertLot', code: item.code, name: name, lot: lot, qty: qty, recv: recvDateTh, exp: exp || '' })
+      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
+      if (exL) { exL.qty = (parseFloat(exL.qty)||0) + qty; if (exp) exL.exp = exp; }
+      else { item.lots = item.lots || []; item.lots.push({ lot: lot||'—', recv: recvDateTh, exp: exp||'—', qty: qty }); }
+    }
     saved++;
   });
 
@@ -3482,16 +3527,28 @@ function saveWd(){
   updateDashStats(); syncACLists(); syncStockTable(); filterStock(); updateDashSummary(); updateDashLists();
   saveToSheets();
   const rbtn = document.querySelector('#pg-recv .btn.sv');
-  if(rbtn){ rbtn.disabled=true; rbtn.textContent='✅ บันทึกแล้ว'; }
-  alert('✅ บันทึกรับพัสดุ ' + saved + ' รายการเรียบร้อยแล้วค่ะ!\n📦 ประวัติอัปเดตแล้วค่ะ 😊');
-  document.querySelectorAll('#pg-recv .rrow').forEach(r => {
-    const ni = r.querySelector('input[type=text]'); if(ni) ni.value='';
-    const qi = r.querySelector('.recv-qty,input[type=number]'); if(qi) qi.value='';
-    const li = r.querySelectorAll('input[type=text]')[1]; if(li) li.value='';
-    const ei = r.querySelector('input[type=date]'); if(ei) ei.value='';
+  if(rbtn){ rbtn.disabled=true; rbtn.textContent='⏳ กำลังบันทึก...'; }
+
+  Promise.all(syncPromises).then(function(results){
+    var failed = results.filter(function(ok){ return !ok; }).length;
+    if (failed === 0) {
+      alert('✅ บันทึกรับพัสดุ ' + saved + ' รายการเรียบร้อยแล้วค่ะ!\n📦 ประวัติอัปเดตแล้วค่ะ 😊');
+    } else {
+      alert('⚠️ บันทึกในแอปแล้ว ' + saved + ' รายการ แต่ส่งขึ้น Google Sheets ไม่สำเร็จ ' + failed + ' รายการค่ะ\nอย่ากดบันทึกซ้ำนะคะ (ยอดจะถูกบวกซ้ำ) — กรุณาตรวจอินเทอร์เน็ตหรือแจ้งผู้ดูแลระบบ ประวัติใน Sheets อาจไม่ครบค่ะ');
+    }
+    document.querySelectorAll('#pg-recv .rrow').forEach((r, i) => {
+      if (i > 0) { r.remove(); return; }   // แถวเสริมที่กดเพิ่มไว้ ให้ลบทิ้ง
+      const ni = r.querySelector('input[type=text]'); if(ni) ni.value='';
+      const qi = r.querySelector('.recv-qty,input[type=number]'); if(qi) qi.value='';
+      const li = r.querySelectorAll('input[type=text]')[1]; if(li) li.value='';
+      const ei = r.querySelector('input[type=date]'); if(ei) ei.value='';
+      const so = r.querySelector('.recv-old-stock'); if(so) so.textContent='—';
+    });
+    const rcNote = document.querySelector('#pg-recv input[placeholder^="หมายเหตุ"]');
+    if (rcNote) rcNote.value='';
+    if(rbtn){ rbtn.disabled=false; rbtn.textContent='💾 บันทึกรับพัสดุ'; }
+    renderHist();
   });
-  if(rbtn){ rbtn.disabled=false; rbtn.textContent='💾 บันทึกรับพัสดุ'; }
-  renderHist();
 }
 function clearWd(){
   if(confirm('ล้างข้อมูล?')){
@@ -3574,33 +3631,66 @@ function filterByStatus(val) {
   applyStockFilter(f);
 }
 
+// แปลงวันที่จากชีตประวัติ — รองรับทั้ง ISO และรูปแบบไทยปี พ.ศ. เช่น "3 ก.ค. 2569 18:51"
+function parseHistDate(s){
+  if(!s) return null;
+  var months = {'ม.ค.':0,'ก.พ.':1,'มี.ค.':2,'เม.ย.':3,'พ.ค.':4,'มิ.ย.':5,'ก.ค.':6,'ส.ค.':7,'ก.ย.':8,'ต.ค.':9,'พ.ย.':10,'ธ.ค.':11};
+  var m = String(s).match(/^(\d{1,2})\s+(\S+)\s+(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if(m && months[m[2]] !== undefined){
+    var y = parseInt(m[3],10); if(y > 2400) y -= 543; // ปี พ.ศ. → ค.ศ.
+    return new Date(y, months[m[2]], parseInt(m[1],10), parseInt(m[4]||'0',10), parseInt(m[5]||'0',10));
+  }
+  var d = new Date(s);
+  return isNaN(d) ? null : (d.getFullYear() > 2400 ? new Date(d.getFullYear()-543, d.getMonth(), d.getDate(), d.getHours(), d.getMinutes()) : d);
+}
+
   function loadHistFromSheets(){
-  const GS_URL = 'https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec';
-  fetch(GS_URL + '?action=history')
-    .then(function(r){ return r.json(); })
+  fetch(GS_HISTORY_URL + '?action=history')
+    .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(rows){
       if (!Array.isArray(rows) || rows.length === 0) return;
       TXLOG = rows.map(function(row){
+        var rawStr = row['วันที่'] || '';
+        var d = parseHistDate(rawStr) || new Date(NaN);
+        var code = String(row['รหัสพัสดุ'] || '');
+        var it = ITEMS.find(function(i){ return i.code === code; });
         return {
-          date: row['วันที่'] || '',
+          date: isNaN(d) ? rawStr : thaiDate(d),
+          rawDate: isNaN(d) ? null : d,
           type: row['ประเภท'] === 'รับเข้า' ? 'recv' : 'wd',
           name: row['ชื่อพัสดุ'] || '',
-          code: row['รหัสพัสดุ'] || '',
+          code: code,
           qty: parseFloat(row['จำนวน']) || 0,
           newStock: parseFloat(row['คงเหลือ']) || 0,
           lot: row['Lot/Serial'] || '—',
           user: row['ผู้บันทึก'] || '',
-          unit: ''
+          unit: it ? (it.unit || '') : ''
         };
-      });
+      }).reverse(); // ชีตเรียงเก่า→ใหม่ (append) แต่ TXLOG ต้องใหม่สุดอยู่บน
       renderHist();
+      syncStockTable();   // เติมช่อง "ทำรายการล่าสุด" จากประวัติ
+      if (typeof updateDashLists === 'function') updateDashLists();
     })
-    .catch(function(err){ console.log('loadHist error:', err); });
+    .catch(function(err){ console.warn('loadHist error:', err); });
 }
 // ── RENDER HISTORY ──
+function histSearchGo(){
+  var ac = document.getElementById('hist-ac');
+  if (ac) ac.style.display = 'none';   // ปิด dropdown แนะนำ กันบังปุ่ม/ตาราง
+  renderHist();
+}
+function clearHistFilter(){
+  ['hist-search','hist-from','hist-to'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
+  var t = document.getElementById('hist-type-sel'); if (t) t.value = 'all';
+  histSearchGo();
+}
 function renderHist(){
   const typeF  = (document.getElementById('hist-type-sel') || {}).value || 'all';
   const searchF= ((document.getElementById('hist-search') || {}).value || '').toLowerCase().trim();
+  const fromV  = (document.getElementById('hist-from') || {}).value || '';
+  const toV    = (document.getElementById('hist-to')   || {}).value || '';
+  const fromD  = fromV ? new Date(fromV + 'T00:00:00') : null;
+  const toD    = toV   ? new Date(toV   + 'T23:59:59') : null;
   const tbody  = document.getElementById('hist-tbody');
   const countEl= document.getElementById('hist-count');
   const summEl = document.getElementById('hist-summary');
@@ -3609,7 +3699,12 @@ function renderHist(){
   let filtered = TXLOG.filter(tx => {
     const typeOk   = typeF === 'all' || tx.type === typeF;
     const searchOk = !searchF || tx.name.toLowerCase().includes(searchF) || tx.code.toLowerCase().includes(searchF);
-    return typeOk && searchOk;
+    let dateOk = true;
+    if (fromD || toD) {
+      const d = tx.rawDate ? new Date(tx.rawDate) : null;
+      dateOk = !!d && !isNaN(d) && (!fromD || d >= fromD) && (!toD || d <= toD);
+    }
+    return typeOk && searchOk && dateOk;
   });
 
   if (filtered.length === 0) {
@@ -3641,13 +3736,16 @@ function renderHist(){
 
   if (countEl) countEl.textContent = filtered.length + ' รายการ';
 
-  // summary chips
+  // summary chips — นับครั้ง + รวมจำนวนชิ้นของช่วง/เงื่อนไขที่กรอง
   const recvCount = filtered.filter(t=>t.type==='recv').length;
   const wdCount   = filtered.filter(t=>t.type==='wd').length;
+  const recvQty   = filtered.reduce((s,t)=>s+(t.type==='recv'?(t.qty||0):0),0);
+  const wdQty     = filtered.reduce((s,t)=>s+(t.type==='wd'  ?(t.qty||0):0),0);
   if (summEl) {
-    summEl.innerHTML = `
-      <span style="background:var(--ok-b);color:var(--ok-t);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">📥 รับเข้า ${recvCount} รายการ</span>
-      <span style="background:var(--wn-b);color:var(--wn-t);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">📤 เบิกออก ${wdCount} รายการ</span>
+    // แสดงสรุปเฉพาะเมื่อค้นหา/เลือกชื่อพัสดุแล้วเท่านั้น
+    summEl.innerHTML = !searchF ? '' : `
+      <span style="background:var(--ok-b);color:var(--ok-t);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">📥 รับเข้า ${recvCount} ครั้ง (+${recvQty} ชิ้น)</span>
+      <span style="background:var(--wn-b);color:var(--wn-t);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">📤 เบิกออก ${wdCount} ครั้ง (−${wdQty} ชิ้น)</span>
       <span style="background:var(--bl);color:var(--nv);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600">📋 รวม ${filtered.length} รายการ</span>`;
   }
 }
@@ -3969,7 +4067,16 @@ function renderReport(){
   if(from && !from.value) from.value = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
   if(to   && !to.value)   to.value   = now.toISOString().split('T')[0];
 
-  var txFiltered = TXLOG;
+  // กรองตามช่วงวันที่ที่เลือก (รายการที่แปลงวันที่ไม่ได้ ให้แสดงไว้ก่อน)
+  var fromD = (from && from.value) ? new Date(from.value + 'T00:00:00') : null;
+  var toD   = (to   && to.value)   ? new Date(to.value   + 'T23:59:59') : null;
+  var txFiltered = TXLOG.filter(function(t){
+    var d = t.rawDate ? new Date(t.rawDate) : null;
+    if(!d || isNaN(d)) return true;
+    if(fromD && d < fromD) return false;
+    if(toD   && d > toD)   return false;
+    return true;
+  });
 
   // สรุปตัวเลข
   var recvTx = txFiltered.filter(function(t){return t.type==='recv';});
@@ -4185,8 +4292,8 @@ function filterStock(){
     var rowCat  = (row.getAttribute('data-cat')||'').toLowerCase();
 
     var qOk  = !q   || rowText.includes(q);
-    // ตรวจ category: ตรงกับ value ที่เลือก
-    var cOk  = !cat || rowCat.includes(cat);
+    // ตรวจ category: เทียบทั้งค่าแบบเป๊ะ — ห้ามใช้ includes เพราะ "การแพทย์" เป็น substring ของ "วิทยาศาสตร์การแพทย์"
+    var cOk  = !cat || rowCat === cat;
     // ตรวจ status: ตรงกันเป๊ะ
     var sOk  = !sts || rowSts === sts;
 
@@ -4362,7 +4469,7 @@ function saveNewItem(){
     lot:lot, recv:recv||'—', exp:exp||'—',
     imgUrl:(document.getElementById('add-icon-preview')||{})._imgData||'',        lots:[{lot:lot, recv:recv||'—', exp:exp||'—', qty:cur}]
   };
-  ITEMS.push(newItem);if(typeof GS_URL!=='undefined'&&GS_URL){fetch(GS_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addItem',item:newItem})});}
+  ITEMS.push(newItem);if(typeof GS_ITEMS_URL!=='undefined'&&GS_ITEMS_URL){fetch(GS_ITEMS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addItem',item:newItem})}).then(function(r){if(!r.ok)console.warn('addItem sync ล้มเหลว: HTTP '+r.status);}).catch(function(err){console.warn('addItem sync ล้มเหลว:',err);});}
 
   // เพิ่มแถวในตาราง
   var tbody = document.getElementById('stock-tbody');
@@ -4475,6 +4582,8 @@ document.addEventListener('DOMContentLoaded', function(){
     if(typeof updateLoginOptions === 'function') updateLoginOptions();
     // Phase 2: โหลดจาก Google Sheets
     setTimeout(loadFromSheets, 500);
+    // โหลดประวัติจากชีตประวัติ (ตัวรวมรับเข้า/เบิกออก) เพื่อเติม "ทำรายการล่าสุด" และหน้ารายงาน
+    setTimeout(loadHistFromSheets, 1200);
   }catch(e){ console.log('init err:',e); }
 });
 
@@ -4500,9 +4609,9 @@ function syncStockTable(){
     // col index (0=รูป, 1=รหัส, 2=ชื่อ, 3=หมวด, 4=หน่วย, 5=min, 6=max, 7=คงเหลือ, 8=ที่จัดเก็บ, 9=รับเข้าล่าสุด, 10=หมดอายุ, 11=สถานะ, 12=จัดการ)
     var cells = row.querySelectorAll('td');
 
-    // col 7: คงเหลือ
+    // col 7: คงเหลือ (พร้อมแถบยอดรายล็อตถ้ามีหลาย lot)
     if(cells[7]){
-      cells[7].textContent = item.cur;
+      cells[7].innerHTML = item.cur + lotMiniHTML(item);
       cells[7].style.color = stsColor;
       cells[7].style.fontWeight = '700';
     }
@@ -4839,7 +4948,11 @@ function previewAddImg(input){         var file = input.files[0];         if(!fi
 // ══════════════════════════════════════════════════════
 // PHASE 2 — Google Sheets Integration
 // ══════════════════════════════════════════════════════
-var GS_URL = 'https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec';
+// Apps Script มี 2 deployment แยกหน้าที่กัน — ห้ามใช้สลับฝั่ง
+// GS_HISTORY_URL: บันทึก/อ่านประวัติเบิก-รับ (?action=history, addLog)
+// GS_ITEMS_URL:   จัดการรายการพัสดุ (saveItems, addItem, addLot, getItems)
+var GS_HISTORY_URL = 'https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec';
+var GS_ITEMS_URL   = 'https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec';
 var GS_ENABLED = true;
 
 // ── ฟังก์ชันช่วย: แปลง CSV text → array of objects ──
@@ -4885,6 +4998,15 @@ function parseCSVToObjects(text) {
   return out;
 }
 
+// ── ฟังก์ชันช่วย: แถบย่อยแสดงยอดคงเหลือรายล็อต (เฉพาะพัสดุที่มี ≥2 lot) ──
+function lotMiniHTML(item) {
+  var ls = (item.lots || []).filter(function(L){ return (parseFloat(L.qty)||0) > 0 && L.lot && L.lot !== '—'; });
+  if (ls.length < 2) return '';
+  var text  = ls.map(function(L){ return L.lot + ': ' + L.qty; }).join(' · ');
+  var title = ls.map(function(L){ return L.lot + ' เหลือ ' + L.qty + (L.exp && L.exp !== '—' ? ' (หมด ' + L.exp + ')' : ''); }).join('\n');
+  return '<div class="lot-mini" title="' + title.replace(/"/g,'&quot;') + '" style="font-size:9.5px;font-weight:400;color:var(--g5);margin-top:2px;line-height:1.4;white-space:nowrap">🏷️ ' + text + '</div>';
+}
+
 // ── ฟังก์ชันช่วย: render ตารางคลังพัสดุจาก ITEMS ──
 function renderStockTable() {
   var tbody = document.getElementById('stock-tbody');
@@ -4910,7 +5032,7 @@ function renderStockTable() {
       '<td><span class="cat">'+item.cat+'</span></td>' +
       '<td><span class="ub">'+(item.unit||'')+'</span></td>' +
       '<td>'+mn+'</td><td>'+mx+'</td>' +
-      '<td style="font-weight:700;color:'+sc+'">'+cur+'</td>' +
+      '<td style="font-weight:700;color:'+sc+'">'+cur+lotMiniHTML(item)+'</td>' +
       '<td style="font-size:11px;color:var(--g5)">📍 '+(item.loc||'')+'</td>' +
       '<td style="font-size:11px;color:var(--g5)">—</td>' +
       '<td style="font-size:11px">'+(item.exp||'—')+'</td>' +
@@ -4932,16 +5054,28 @@ function loadFromSheets() {
     {name:'วิทยาศาสตร์การแพทย์',     cat:'🔬 7.วิทยาศาสตร์การแพทย์', icon:'🔬'},
     {name:'อื่นๆ',                    cat:'📦 5.อื่นๆ',                  icon:'📦'},
     {name:'ไฟฟ้า',                    cat:'⚡ 6.ไฟฟ้า',                  icon:'⚡'},
-    {name:'Needle+Syringe+กล่องเข็ม', cat:'💉 8.เวชภัณฑ์มิใช่ยา',      icon:'💉'},
+    {name:'Needle+Syringe+กล่องเข็ม', cat:'💉 9.Needle+Syringe',        icon:'💉'},
     {name:'เวชภัณฑ์มิใช่ยา',          cat:'💉 8.เวชภัณฑ์มิใช่ยา',      icon:'💉'}
   ];
 
   var banner = document.getElementById('gs-status');
-  if (banner) { banner.style.display='flex'; banner.textContent='☁️ กำลังโหลดข้อมูลจาก Google Sheets...'; }
+  if (banner) { banner.style.display='flex'; banner.style.background='#2c3e50'; banner.textContent='☁️ กำลังโหลดข้อมูลจาก Google Sheets...'; }
 
+  // โหลด CSV พร้อม retry — ฝั่ง Google ตอบ error เป็นพักๆ ลองซ้ำก่อนถือว่าพลาดจริง
+  function fetchCSVRetry(url, tries){
+    return fetch(url).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.text();
+    }).catch(function(err){
+      if(tries <= 1) throw err;
+      return new Promise(function(res){ setTimeout(res, 800); })
+        .then(function(){ return fetchCSVRetry(url, tries-1); });
+    });
+  }
+
+  var failedSheets = [];
   var promises = SHEET_INFO.map(function(sheet) {
-    return fetch(CSV_BASE + encodeURIComponent(sheet.name))
-      .then(function(r){ return r.text(); })
+    return fetchCSVRetry(CSV_BASE + encodeURIComponent(sheet.name), 3)
       .then(function(csv) {
         var rows = parseCSVToObjects(csv);
         return rows.filter(function(row) {
@@ -4981,25 +5115,60 @@ function loadFromSheets() {
           };
         });
       })
-      .catch(function(err){ console.log('โหลด sheet ไม่ได้:', sheet.name, err); return []; });
+      .catch(function(err){ console.warn('โหลด sheet ไม่ได้:', sheet.name, err); failedSheets.push(sheet.name); return []; });
   });
 
-  Promise.all(promises).then(function(results) {
+  // โหลดทะเบียน lot (tab "Lot") — tab นี้อาจยังไม่ถูกสร้าง ให้ข้ามแบบเงียบ ไม่นับเป็นโหลดพลาด
+  var lotPromise = fetchCSVRetry(CSV_BASE + 'Lot', 2)
+    .then(function(csv){
+      var rows = parseCSVToObjects(csv);
+      // กัน gviz ส่ง tab อื่นมาแทนตอนไม่มี tab Lot — ข้อมูล lot จริงต้องมีคอลัมน์ lot และ qty
+      if (!rows.length || rows[0].qty === undefined || rows[0].lot === undefined) return null;
+      return rows;
+    })
+    .catch(function(){ return null; });
+
+  Promise.all([Promise.all(promises), lotPromise]).then(function(loaded) {
+    var results = loaded[0], lotRows = loaded[1];
     var allItems=[], seen={};
     results.forEach(function(items) {
       items.forEach(function(item) {
-        if (item.code && item.code.length<=20) { if (!seen[item.code]) { seen[item.code] = allItems.length; allItems.push(item); } else { var ex = allItems[seen[item.code]]; ex.cur = (parseInt(ex.cur)||0) + (parseInt(item.cur)||0); if (item.lots && item.lots[0] && item.lots[0].lot !== '-') ex.lots.push(item.lots[0]); } }
+        if (item.code && item.code.length<=20) { if (seen[item.code] === undefined) { seen[item.code] = allItems.length; allItems.push(item); } else { var ex = allItems[seen[item.code]]; ex.cur = (parseInt(ex.cur)||0) + (parseInt(item.cur)||0); if (item.lots && item.lots[0] && item.lots[0].lot !== '-') ex.lots.push(item.lots[0]); } }
       });
     });
-    if (allItems.length === 0) {
-      console.log('ไม่พบข้อมูลจาก Sheets — ใช้ข้อมูลเดิม');
-      if (banner) banner.style.display='none';
+    // ผูกทะเบียน lot เข้ากับพัสดุ เรียงวันหมดอายุใกล้สุดก่อน (FEFO)
+    if (lotRows && lotRows.length) {
+      var lotsByCode = {};
+      lotRows.forEach(function(lr){
+        var q = parseFloat(lr.qty)||0;
+        if (!lr.code || q <= 0) return;
+        (lotsByCode[lr.code] = lotsByCode[lr.code] || []).push({ lot: lr.lot||'—', recv: lr.recv||'—', exp: lr.exp||'—', qty: q });
+      });
+      var expTime = function(e){ var d = new Date(e); return isNaN(d) ? Infinity : d.getTime(); };
+      allItems.forEach(function(item){
+        var ls = lotsByCode[item.code];
+        if (!ls || !ls.length) return;
+        ls.sort(function(a,b){ return expTime(a.exp) - expTime(b.exp); });
+        item.lots = ls;
+        item.lot = ls[0].lot; item.exp = ls[0].exp; item.recv = ls[0].recv;
+      });
+    }
+    if (failedSheets.length > 0 || allItems.length === 0) {
+      // โหลดไม่ครบ — คงข้อมูลเดิมไว้ทั้งหมด ห้ามเขียนทับด้วยข้อมูลบางส่วน (ยอด/รูปจะเพี้ยน)
+      console.warn('โหลดจาก Sheets ไม่ครบ:', failedSheets.join(', ') || 'ไม่มีข้อมูล');
+      if (banner) {
+        banner.style.background='#c0392b';
+        banner.textContent='⚠️ โหลดข้อมูลจาก Google Sheets ไม่ครบถ้วน — แสดงข้อมูลเดิมไปก่อน';
+      }
+      alert('⚠️ ไม่สามารถโหลดข้อมูลจาก Google Sheets ได้ครบถ้วน\nกรุณาลองใหม่อีกครั้ง หรือติดต่อผู้ดูแลระบบหากยังพบปัญหา'
+        + (failedSheets.length ? '\n\n(หมวดที่โหลดไม่สำเร็จ: ' + failedSheets.join(', ') + ')' : ''));
       return;
     }
     ITEMS.length=0;
    allItems.forEach(function(item){ if(!item.imgUrl&&item.code&&IMG_FB[item.code])item.imgUrl=IMG_FB[item.code]; ITEMS.push(item); });
     ITEMS.forEach(function(item){var s=item.code?localStorage.getItem('img_'+item.code):null;if(s)item.imgData=s;});
     renderStockTable();
+    syncStockTable();   // เติม "ทำรายการล่าสุด" กลับ กรณีประวัติโหลดเสร็จก่อนตารางถูกวาดใหม่
     if (typeof syncACLists==='function') syncACLists();
     updateDashStats();
     updateDashLists();
@@ -5027,21 +5196,24 @@ function handleExcelUpload(file){   if(!file) return;   var reader = new FileRea
     };
   });
 
- fetch('https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec', {
-      method: 'POST', mode: 'no-cors',
+  fetch(GS_ITEMS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ action: 'saveItems', items: itemsToSave })
-    }).catch(function(err){ console.log('Save error:', err); });
+    }).then(function(r){ if(!r.ok) console.warn('saveToSheets ล้มเหลว: HTTP '+r.status); })
+      .catch(function(err){ console.warn('saveToSheets ล้มเหลว:', err); });
 }
 
 // ── บันทึก Transaction Log ลง Sheets ──
 function logToSheets(txData) {
   if(!GS_ENABLED) return;
-  fetch('https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec', {
+  fetch(GS_HISTORY_URL, {
     method: 'POST',
-    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'addLog', log: txData })
   })
-  .catch(function(err){ console.log('Log error:', err); });
+  .then(function(r){ if(!r.ok) console.warn('logToSheets ล้มเหลว: HTTP '+r.status); })
+  .catch(function(err){ console.warn('logToSheets ล้มเหลว:', err); });
 }
 function camAlert(){ /* ใช้ startQRScan แทนแล้ว */ }
 </script>
