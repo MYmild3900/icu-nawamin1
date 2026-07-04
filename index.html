@@ -521,7 +521,7 @@ tr:hover td{background:var(--wh)}
       <span style="font-size:30px">💊</span>
       <div style="flex:1">
         
-        <div style="font-size:11px;color:var(--g5)">รับเข้า <b style="color:var(--ok-t)">+20</b> · เบิกออก <b style="color:var(--wn-t)">-8</b> · ต้องดำเนินการ <b style="color:var(--rd-t)">5</b> รายการ</div>
+        <div style="font-size:11px;color:var(--g5)">วันนี้ รับเข้า <b id="dash-recv-count" style="color:var(--ok-t)">+0</b> · เบิกออก <b id="dash-wd-count" style="color:var(--wn-t)">-0</b> · ต้องดำเนินการ <b id="dash-urgent-count" style="color:var(--rd-t)">0</b> รายการ</div>
       </div>
       <span style="background:var(--pk-b);border:1px solid var(--pk-d);border-radius:20px;padding:2px 9px;font-size:10px;color:var(--pk-t);font-weight:600">🩺 ICU นวมินทร์ 1</span>
     </div>
@@ -3670,6 +3670,7 @@ function parseHistDate(s){
       renderHist();
       syncStockTable();   // เติมช่อง "ทำรายการล่าสุด" จากประวัติ
       if (typeof updateDashLists === 'function') updateDashLists();
+      if (typeof updateDashSummary === 'function') updateDashSummary();
     })
     .catch(function(err){ console.warn('loadHist error:', err); });
 }
@@ -5172,6 +5173,7 @@ function loadFromSheets() {
     if (typeof syncACLists==='function') syncACLists();
     updateDashStats();
     updateDashLists();
+    if (typeof updateDashSummary==='function') updateDashSummary();
     filterStock();
     if (banner) {
       banner.textContent='✅ โหลดข้อมูลจาก Google Sheets แล้ว ('+allItems.length+' รายการ)';
