@@ -5145,7 +5145,13 @@ function loadFromSheets() {
         if (!lr.code || q <= 0) return;
         (lotsByCode[lr.code] = lotsByCode[lr.code] || []).push({ lot: lr.lot||'—', recv: lr.recv||'—', exp: lr.exp||'—', qty: q });
       });
-      var expTime = function(e){ var d = new Date(e); return isNaN(d) ? Infinity : d.getTime(); };
+      // เรียงวันหมดอายุ — รองรับทั้งปี ค.ศ. และ พ.ศ. (ปี > 2400 ถือเป็น พ.ศ. ลบ 543)
+      var expTime = function(e){
+        var d = new Date(e);
+        if (isNaN(d)) return Infinity;
+        var y = d.getFullYear();
+        return (y > 2400 ? new Date(y - 543, d.getMonth(), d.getDate()) : d).getTime();
+      };
       allItems.forEach(function(item){
         var ls = lotsByCode[item.code];
         if (!ls || !ls.length) return;
