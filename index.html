@@ -428,6 +428,7 @@ tr:hover td{background:var(--wh)}
     <div class="ni" onclick="go('up',this)">⬆️ อัปโหลด Excel</div>
     <div class="ni" onclick="go('qr',this)">📷 สแกน QR Code</div>
     <div class="ni" onclick="go('cfg',this)">⚙️ ตั้งค่าระบบ</div>
+    <div class="ni" onclick="go('help',this)">📖 วิธีใช้</div>
   </div>
   <div class="sf">
     <div class="sf-u">
@@ -2195,6 +2196,79 @@ tr:hover td{background:var(--wh)}
     </div>
   </div>
 
+  <!-- HELP / วิธีใช้ -->
+  <div id="pg-help" class="pg">
+    <div class="ps">คู่มือการใช้งานสำหรับผู้ใช้ใหม่ — อ่านจบใช้เป็นทันทีค่ะ</div>
+
+    <div class="card">
+      <div class="ct2">🔑 การเข้าสู่ระบบ</div>
+      <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.9;color:var(--g7)">
+        <li>เลือก<b>ชื่อผู้ใช้ของตัวเอง</b>เสมอ — ชื่อผู้ทำรายการจะบันทึกติดไปกับทุกการรับ-เบิก</li>
+        <li>แนะนำเพิ่มเว็บนี้ไว้ที่หน้าจอโฮมของมือถือ (เมนูเบราว์เซอร์ → "เพิ่มไปยังหน้าจอหลัก") จะได้กดใช้เหมือนแอป</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="ct2">📊 แดชบอร์ด — ภาพรวมคลัง</div>
+      <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.9;color:var(--g7)">
+        <li>การ์ดสรุป 4 ใบ: พัสดุทั้งหมด / <span style="color:var(--ok-t);font-weight:600">ปกติ</span> / <span style="color:var(--wn-t);font-weight:600">ใกล้หมด</span> / <span style="color:var(--rd-t);font-weight:600">หมดแล้ว</span> — กดที่การ์ดเพื่อดูรายการ</li>
+        <li>กล่อง "ต้องดำเนินการด่วน" = ของที่หมด/ใกล้หมด ต้องรีบสั่งเติม</li>
+        <li>แถบล่างสุด: ยอดรับเข้า-เบิกออกของ<b>วันนี้</b> อัปเดตสดตามการใช้งาน</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="ct2">📦 คลังพัสดุ — ค้นหาและดูของ</div>
+      <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.9;color:var(--g7)">
+        <li>พิมพ์ชื่อ/รหัสในช่องค้นหา (กรองทันทีขณะพิมพ์) หรือกด 📷 สแกน QR</li>
+        <li>กรองตาม<b>หมวด</b>และ<b>สถานะ</b>ได้จากเมนูด้านบน</li>
+        <li>ช่อง "คงเหลือ": ของที่มีหลาย lot จะมีบรรทัดเล็ก 🏷️ บอกยอดแต่ละ lot — ชี้เมาส์ดูวันหมดอายุ</li>
+        <li>ช่อง "ทำรายการล่าสุด": วันที่ (+รับ / −เบิก) ของธุรกรรมล่าสุด</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="ct2">📥 รับพัสดุเข้า</div>
+      <ol style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.9;color:var(--g7)">
+        <li>พิมพ์ชื่อพัสดุ (มีรายการแนะนำ) หรือสแกน QR</li>
+        <li>กรอกจำนวนรับ</li>
+        <li><b>Lot No.</b>: พิมพ์ตามฉลากกล่อง — ถ้าฉลากไม่มีเลข lot ใช้เดือน/ปีหมดอายุแทน เช่น <span class="cb">10/70</span></li>
+        <li><b>วันหมดอายุ</b>: ฉลากบอกแค่เดือน/ปี → เลือกวันสุดท้ายของเดือนนั้น</li>
+        <li>กด 💾 บันทึก → <b>รอข้อความ ✅ ยืนยันก่อนปิดหน้า</b></li>
+      </ol>
+      <div style="font-size:12px;color:var(--g5);margin-top:8px">💡 รับหลายรายการพร้อมกัน: กด "+ เพิ่มรายการ" แล้วบันทึกทีเดียว</div>
+    </div>
+
+    <div class="card">
+      <div class="ct2">📤 เบิกพัสดุออก</div>
+      <ol style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.9;color:var(--g7)">
+        <li>พิมพ์ชื่อ/สแกน QR — ระบบโชว์ยอดคงเหลือ</li>
+        <li>กรอกจำนวนเบิก</li>
+        <li><b>เลือก Lot</b>: ลำดับที่ 1 คือตัวที่หมดอายุก่อน มีป้าย "👆 ใช้ก่อน" — หยิบของจริงจากตู้ให้ตรง lot</li>
+        <li>กด 💾 บันทึกเบิก → รอ ✅ → ฟอร์มล้างเองพร้อมรายการถัดไป</li>
+      </ol>
+      <div style="font-size:12px;color:var(--g5);margin-top:8px">⚠️ ถ้าเลือก lot ข้ามคิว ระบบจะเตือนว่ายังมี lot ที่ควรใช้ก่อน — เตือนเท่านั้น กรณีจำเป็นเลือกได้</div>
+    </div>
+
+    <div class="card">
+      <div class="ct2">🕐 ประวัติรายการ / 📈 รายงาน / 🗂️ Stock Card</div>
+      <ul style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.9;color:var(--g7)">
+        <li><b>ประวัติ</b>: โหลดอัตโนมัติ เลือกช่วงวันที่ "จาก–ถึง" ได้ / พิมพ์ชื่อพัสดุ → เห็นสรุป "รับ x ครั้ง (+x ชิ้น) เบิก x ครั้ง (−x ชิ้น)" ของช่วงนั้นทันที / Export CSV ได้</li>
+        <li><b>รายงาน</b>: Top 5 เบิกมากสุด + สรุปยอดตามช่วงวันที่</li>
+        <li><b>Stock Card</b>: สร้างใบ Stock Card รายพัสดุ พิมพ์ได้</li>
+      </ul>
+    </div>
+
+    <div class="card" style="border:1.5px solid var(--wn-d);background:var(--wn-b)">
+      <div class="ct2" style="color:var(--rd-t)">⚠️ กติกาสำคัญที่ทุกคนต้องรู้</div>
+      <ol style="margin:6px 0 0 18px;padding:0;font-size:13px;line-height:1.9;color:var(--g7)">
+        <li><b>รอข้อความ ✅ ยืนยันก่อนปิดหน้าเสมอ</b> — ถ้าขึ้น ⚠️ ว่า sync ไม่สำเร็จ <b>อย่ากดบันทึกซ้ำทันที</b> (ยอดจะถูกหักซ้ำ) ให้รีเฟรชหน้าก่อนแล้วตรวจว่ารายการติดหรือยัง</li>
+        <li><b>เจอข้อความ "โหลดข้อมูลไม่ครบถ้วน" ตอนเปิดเว็บ</b> — เน็ตมีปัญหาชั่วคราว ระบบใช้ข้อมูลเดิมไปก่อน ให้รีเฟรชใหม่ ถ้าไม่หายแจ้งผู้ดูแล</li>
+        <li><b>ยอดของจริงในตู้คือพระเอก</b> — นับจริงไม่ตรงกับระบบ ให้ผู้ดูแลแก้ตัวเลขในชีต Google Sheets ช่อง "Stock คงเหลือ ★" โดยตรง แล้วรีเฟรชเว็บ</li>
+      </ol>
+    </div>
+  </div>
+
   <!-- STOCK CARD -->
   <div id="pg-sc" class="pg">
     <div class="ps">สร้างและพิมพ์ใบ Stock Card</div>
@@ -2629,7 +2703,7 @@ function doLogin(){
 document.getElementById('upw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 function doLogout(){if(confirm('ต้องการออกจากระบบ?')){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('usel').value='';document.getElementById('upw').value=''}}
 
-const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',sc:'Stock Card',up:'อัปโหลด Excel',qr:'สแกน QR Code',cfg:'ตั้งค่าระบบ'};
+const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',sc:'Stock Card',up:'อัปโหลด Excel',qr:'สแกน QR Code',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
 function go(id,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
