@@ -151,6 +151,21 @@ th{background:var(--bg);padding:7px 10px;text-align:left;font-size:11px;color:va
   font-weight:600;border-bottom:1.5px solid var(--g2);white-space:nowrap}
 td{padding:8px 10px;border-bottom:1px solid var(--g1);vertical-align:middle;color:var(--g7)}
 tr:hover td{background:var(--wh)}
+/* บีบคอลัมน์ตารางคลังพัสดุ — กันช่องว่างเกินระหว่าง "คงเหลือ" กับ "ที่จัดเก็บ" ให้สถานะ/จัดการอยู่ในจอ */
+#pg-stock th,#pg-stock td{padding:8px 6px;overflow-wrap:break-word}
+#pg-stock .lot-mini{white-space:normal}
+#pg-stock th:nth-child(1),#pg-stock td:nth-child(1){width:44px}
+#pg-stock th:nth-child(2),#pg-stock td:nth-child(2){width:78px}
+#pg-stock th:nth-child(4),#pg-stock td:nth-child(4){width:104px}
+#pg-stock th:nth-child(5),#pg-stock td:nth-child(5){width:52px}
+#pg-stock th:nth-child(6),#pg-stock td:nth-child(6){width:38px}
+#pg-stock th:nth-child(7),#pg-stock td:nth-child(7){width:38px}
+#pg-stock th:nth-child(8),#pg-stock td:nth-child(8){width:74px}
+#pg-stock th:nth-child(9),#pg-stock td:nth-child(9){width:82px}
+#pg-stock th:nth-child(10),#pg-stock td:nth-child(10){width:92px}
+#pg-stock th:nth-child(11),#pg-stock td:nth-child(11){width:86px}
+#pg-stock th:nth-child(12),#pg-stock td:nth-child(12){width:66px}
+#pg-stock th:nth-child(13),#pg-stock td:nth-child(13){width:84px;white-space:nowrap}
 .cb{background:var(--g1);border-radius:3px;padding:1px 6px;font-size:10px;font-weight:700;color:var(--nv);font-family:monospace}
 .ub{background:var(--wh);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--nv)}
 .cat{background:var(--g0);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--g5)}
@@ -421,11 +436,11 @@ tr:hover td{background:var(--wh)}
     <div class="nl">ข้อมูล</div>
     <div class="ni" onclick="go('hist',this)">🕐 ประวัติรายการ</div>
     <div class="ni" onclick="go('rpt',this)">📈 รายงาน</div>
+    <div class="ni" onclick="go('req',this)">🧾 สรุปเบิกรายเดือน</div>
     <div class="ni" onclick="go('sc',this)">🗂️ Stock Card</div>
   </div>
   <div class="ns">
     <div class="nl">เครื่องมือ</div>
-    <div class="ni" onclick="go('up',this)">⬆️ อัปโหลด Excel</div>
     <div class="ni" onclick="go('qr',this)">📷 สแกน QR Code</div>
     <div class="ni" onclick="go('cfg',this)">⚙️ ตั้งค่าระบบ</div>
     <div class="ni" onclick="go('help',this)">📖 วิธีใช้</div>
@@ -505,10 +520,11 @@ tr:hover td{background:var(--wh)}
       </div>
     </div>
     <div class="dg">
-      <div class="card">
-        <div class="ct2">🏆 เบิกมากที่สุดเดือนนี้</div>
-        <div id="dash-top5">
-          <div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">บันทึกรายการเบิกออกก่อนเพื่อดูสถิติค่ะ</div>
+      <div class="card" style="border:2px solid var(--rd-t);background:#fff9f8">
+        <div class="ct2" style="color:var(--rd-t);font-size:15px">⏰ แจ้งเตือนวันหมดอายุ <span id="dash-expiry-badge" style="display:none;background:var(--rd-t);color:#fff;border-radius:12px;padding:1px 10px;font-size:12px;font-weight:700;margin-left:6px;vertical-align:middle">0</span></div>
+        <div style="font-size:10px;color:var(--g5);margin-bottom:6px">🟥 ของหมดอายุแล้ว · 🔴 ≤30 วัน · 🟠 ≤60 วัน · 🟡 ≤90 วัน &nbsp;|&nbsp; คนละเรื่องกับ "หมดสต็อก" (คงเหลือ = 0)</div>
+        <div id="dash-expiry-list">
+          <div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">กำลังตรวจสอบวันหมดอายุ...</div>
         </div>
       </div>
       <div class="card">
@@ -519,10 +535,9 @@ tr:hover td{background:var(--wh)}
       </div>
     </div>
     <div class="card" style="margin-top:12px">
-      <div class="ct2">⏰ แจ้งเตือนวันหมดอายุ (ของหมดอายุ + ใกล้ถึงวันหมดอายุ ภายใน 90 วัน)</div>
-      <div style="font-size:10px;color:var(--g5);margin-bottom:6px">🟥 ของหมดอายุแล้ว · 🔴 ใกล้หมด ≤30 วัน · 🟠 ≤60 วัน · 🟡 ≤90 วัน &nbsp;|&nbsp; หมายเหตุ: คนละเรื่องกับ "หมดสต็อก" (คงเหลือ = 0)</div>
-      <div id="dash-expiry-list">
-        <div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">กำลังตรวจสอบวันหมดอายุ...</div>
+      <div class="ct2">🏆 เบิกมากที่สุดเดือนนี้</div>
+      <div id="dash-top5">
+        <div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">บันทึกรายการเบิกออกก่อนเพื่อดูสถิติค่ะ</div>
       </div>
     </div>
     <div class="card" style="display:flex;gap:14px;align-items:center;padding:12px 16px">
@@ -2277,6 +2292,24 @@ tr:hover td{background:var(--wh)}
     </div>
   </div>
 
+  <!-- REQ SUMMARY / สรุปเบิกรายเดือน -->
+  <div id="pg-req" class="pg">
+    <div class="ps">สรุปยอดที่ควรเบิกประจำรอบเดือน — คำนวณจาก Max − คงเหลือ (ใช้เป็นโน้ตช่วยจำตอนไปคีย์เบิกในระบบโรงพยาบาล)</div>
+    <div class="card">
+      <div class="bar" style="flex-wrap:wrap;gap:8px">
+        <select id="req-mode" class="sel" onchange="renderReqSummary()" style="min-width:220px">
+          <option value="need">เฉพาะที่ต้องเบิก (ควรเบิก &gt; 0)</option>
+          <option value="all">แสดงทั้งหมด</option>
+        </select>
+        <button class="btn pr" onclick="printReqSummary()">🖨️ พิมพ์ / เซฟ PDF</button>
+        <span id="req-count" style="font-size:11px;color:var(--g4)"></span>
+      </div>
+      <div id="req-print-area">
+        <div style="text-align:center;padding:24px;color:var(--g4);font-size:12px">กำลังคำนวณ...</div>
+      </div>
+    </div>
+  </div>
+
   <!-- STOCK CARD -->
   <div id="pg-sc" class="pg">
     <div class="ps">สร้างและพิมพ์ใบ Stock Card</div>
@@ -2321,17 +2354,6 @@ tr:hover td{background:var(--wh)}
         <div style="font-size:36px;margin-bottom:8px">🗂️</div>
         พิมพ์ชื่อพัสดุหรือสแกน QR เพื่อดู Stock Card ค่ะ
       </div>
-    </div>
-  </div>
-
-  <!-- UPLOAD -->
-  <div id="pg-up" class="pg">
-    <div class="ps">นำเข้าข้อมูลจาก Excel หรือ Google Sheets</div>
-    <div class="card">
-      <div style="display:flex;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--g1)">
-        <button class="btn pr sm">📄 อัปโหลด Excel</button><input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelUpload(this.files[0])"><button class="btn sm">🔗 Google Sheets</button>
-      </div>
-      <div class="drop"><div style="font-size:36px;margin-bottom:8px">📂</div><h3>ลากไฟล์มาวางที่นี่</h3><p style="font-size:12px;color:var(--g4);margin:4px 0 12px">รองรับ .xlsx .xls .csv</p><button class="btn pr" onclick="document.getElementById('excel-file-input').click()">เลือกไฟล์</button></div>
     </div>
   </div>
 
@@ -2711,7 +2733,7 @@ function doLogin(){
 document.getElementById('upw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 function doLogout(){if(confirm('ต้องการออกจากระบบ?')){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('usel').value='';document.getElementById('upw').value=''}}
 
-const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',sc:'Stock Card',up:'อัปโหลด Excel',qr:'สแกน QR Code',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
+const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',req:'สรุปเบิกรายเดือน',sc:'Stock Card',qr:'สแกน QR Code',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
 function go(id,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
@@ -2721,6 +2743,7 @@ function go(id,el){
   if(id==='hist') setTimeout(renderHist,50);
   if(id==='wd'||id==='recv') setTimeout(syncACLists,80);
   if(id==='rpt') setTimeout(renderReport,50);
+  if(id==='req') setTimeout(renderReqSummary,50);
   if(id==='cfg') setTimeout(renderStaffTable,50);
   if(id==='dash') setTimeout(function(){ updateDashStats(); updateDashLists(); },50);
 }
@@ -4458,6 +4481,40 @@ function editStaff(id){
   document.getElementById('add-staff-modal').classList.add('show');
 }
 
+// บันทึกรายชื่อทั้งชุดขึ้น Google Sheets (tab "Staff") — ให้ทุกเครื่องเห็นตรงกัน
+function saveStaffToSheets(){
+  if(typeof GS_ITEMS_URL==='undefined') return;
+  fetch(GS_ITEMS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'saveStaff', staff: STAFF })
+  }).then(function(r){
+    if(!r.ok){ alert('⚠️ บันทึกรายชื่อขึ้น Google Sheets ไม่สำเร็จ (HTTP '+r.status+') — รายชื่อในเครื่องนี้เปลี่ยนแล้ว แต่เครื่องอื่นอาจยังไม่เห็น ลองบันทึกซ้ำอีกครั้งค่ะ'); }
+  }).catch(function(err){
+    alert('⚠️ บันทึกรายชื่อขึ้น Google Sheets ไม่สำเร็จ — ตรวจอินเทอร์เน็ตแล้วลองใหม่ค่ะ');
+    console.warn('saveStaff error:', err);
+  });
+}
+
+// โหลดรายชื่อจาก tab "Staff" (ถ้ายังไม่มี tab ใช้รายชื่อเริ่มต้นในโค้ด)
+function loadStaffFromSheets(){
+  if(typeof fetchCSVRetry !== 'function' || typeof CSV_BASE_G === 'undefined') return;
+  fetchCSVRetry(CSV_BASE_G + 'Staff', 2)
+    .then(function(csv){
+      var rows = parseCSVToObjects(csv);
+      // กัน gviz ส่ง tab อื่นมาแทนตอนไม่มี tab Staff — ต้องมีคอลัมน์ name และ role จริง
+      if(!rows.length || rows[0].name === undefined || rows[0].role === undefined) return;
+      var loaded = rows.filter(function(r){ return (r.name||'').trim() !== ''; })
+        .map(function(r,i){ return { id: parseInt(r.id)||i+1, name: r.name.trim(), pos: (r.pos||'').trim(), role: (r.role||'user').trim() }; });
+      if(loaded.length === 0) return;
+      STAFF.length = 0;
+      loaded.forEach(function(s){ STAFF.push(s); });
+      renderStaffTable();
+      if(typeof updateLoginOptions==='function') updateLoginOptions();
+    })
+    .catch(function(){ /* ไม่มี tab Staff — ใช้รายชื่อเริ่มต้น */ });
+}
+
 function saveStaff(){
   var name = document.getElementById('staff-name').value.trim();
   var pos  = document.getElementById('staff-pos').value.trim();
@@ -4468,20 +4525,28 @@ function saveStaff(){
     var s = STAFF.find(function(st){return st.id===editingStaffId;});
     if(s){ s.name=name; s.pos=pos; s.role=role; }
   } else {
-    var newId = Math.max.apply(null, STAFF.map(function(s){return s.id;}))+1;
+    var newId = STAFF.length ? Math.max.apply(null, STAFF.map(function(s){return s.id;}))+1 : 1;
     STAFF.push({id:newId, name:name, pos:pos, role:role});
   }
   renderStaffTable();
-  // อัปเดต login dropdown
-  var sel = document.getElementById('usel');
-  if(sel){
-    sel.innerHTML = '<option value="">-- เลือกชื่อ --</option>'
-      + STAFF.map(function(s){
-          return '<option>'+s.name+(s.role==='admin'?' (Admin)':'')+'</option>';
-        }).join('');
-  }
+  if(typeof updateLoginOptions==='function') updateLoginOptions();
+  saveStaffToSheets();
   cm('add-staff-modal');
   alert('✅ บันทึกข้อมูลบุคลากรเรียบร้อยแล้วค่ะ!');
+}
+
+function deleteStaff(id){
+  var s = STAFF.find(function(st){return st.id===id;});
+  if(!s) return;
+  if(STAFF.length <= 1){ alert('ลบไม่ได้ค่ะ — ต้องเหลือบุคลากรอย่างน้อย 1 คนในระบบ'); return; }
+  var admins = STAFF.filter(function(st){return st.role==='admin';});
+  if(s.role==='admin' && admins.length <= 1){ alert('ลบไม่ได้ค่ะ — ต้องเหลือ Admin อย่างน้อย 1 คนในระบบ'); return; }
+  if(!confirm('ยืนยันลบรายชื่อ "'+s.name+'" ออกจากระบบ?')) return;
+  var idx = STAFF.indexOf(s);
+  STAFF.splice(idx, 1);
+  renderStaffTable();
+  if(typeof updateLoginOptions==='function') updateLoginOptions();
+  saveStaffToSheets();
 }
 
 function renderStaffTable(){
@@ -4492,10 +4557,13 @@ function renderStaffTable(){
       ? '<span style="background:var(--bl);color:var(--nv);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600">Admin</span>'
       : '<span style="background:var(--ok-b);color:var(--ok-t);padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600">ผู้ใช้</span>';
     return '<tr><td>'+(i+1)+'</td><td>'+s.name+'</td><td>'+s.pos+'</td><td>'+rb+'</td>'
-      +'<td><button class="btn sm staff-edit-btn" data-sid="'+s.id+'">✏️ แก้ไข</button></td></tr>';
+      +'<td><button class="btn sm staff-edit-btn" data-sid="'+s.id+'" style="margin-right:4px">✏️ แก้ไข</button>'
+      +'<button class="btn sm staff-del-btn" data-sid="'+s.id+'" style="color:var(--rd-t)">🗑 ลบ</button></td></tr>';
   }).join('');
   // event delegation — bind ครั้งเดียวบน tbody
   tbody.onclick = function(e){
+    var del = e.target.closest('.staff-del-btn');
+    if(del){ deleteStaff(parseInt(del.dataset.sid)); return; }
     var btn = e.target.closest('.staff-edit-btn');
     if(btn) editStaff(parseInt(btn.dataset.sid));
   };
@@ -4673,6 +4741,8 @@ document.addEventListener('DOMContentLoaded', function(){
     setTimeout(loadFromSheets, 500);
     // โหลดประวัติจากชีตประวัติ (ตัวรวมรับเข้า/เบิกออก) เพื่อเติม "ทำรายการล่าสุด" และหน้ารายงาน
     setTimeout(loadHistFromSheets, 1200);
+    // โหลดรายชื่อบุคลากรจาก tab Staff (ถ้ามี)
+    setTimeout(loadStaffFromSheets, 800);
   }catch(e){ console.log('init err:',e); }
 });
 
@@ -4927,6 +4997,18 @@ function renderExpiryAlerts(){
   }
   if(!html){ html='<div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">🎉 ไม่มีพัสดุหมดอายุ หรือใกล้หมดอายุใน 90 วันค่ะ</div>'; }
   el.innerHTML = html;
+  // ป้ายตัวเลขบนหัวการ์ด
+  var badge = document.getElementById('dash-expiry-badge');
+  if(badge){
+    var total = expired.length + soon.length;
+    if(total > 0){
+      badge.style.display = 'inline-block';
+      badge.textContent = total + ' รายการ';
+      badge.style.background = expired.length > 0 ? '#8e1b0f' : 'var(--wn-t)';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
 }
 
 function updateDashLists(){
@@ -5124,6 +5206,19 @@ function previewAddImg(input){         var file = input.files[0];         if(!fi
 var GS_HISTORY_URL = 'https://script.google.com/macros/s/AKfycbzh8lonlawsWeG2iMxLlvXJUc2OS7q9xI2hr-79UUA_iz18KKKPkl24nbfuoZURy45kBQ/exec';
 var GS_ITEMS_URL   = 'https://script.google.com/macros/s/AKfycby-4MeGIsAB0L4Y0xHvIPFI4YR5PhsafhdfSfKMpRC9QYo2_NMrtiFuVgbqgYTsyfab/exec';
 var GS_ENABLED = true;
+// ฐาน URL อ่านข้อมูล CSV จาก Google Sheets (ใช้ร่วมกันหลายจุด)
+var CSV_BASE_G = 'https://docs.google.com/spreadsheets/d/1LI_5pWF5XCxgMi8OhxXir42kiTpqpfUBat8egzGH4u4/gviz/tq?tqx=out:csv&sheet=';
+// โหลด CSV พร้อม retry — ฝั่ง Google ตอบ error เป็นพักๆ ลองซ้ำก่อนถือว่าพลาดจริง
+function fetchCSVRetry(url, tries){
+  return fetch(url).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return r.text();
+  }).catch(function(err){
+    if(tries <= 1) throw err;
+    return new Promise(function(res){ setTimeout(res, 800); })
+      .then(function(){ return fetchCSVRetry(url, tries-1); });
+  });
+}
 
 // ── ฟังก์ชันช่วย: แปลง CSV text → array of objects ──
 function parseCSVToObjects(text) {
@@ -5174,7 +5269,7 @@ function lotMiniHTML(item) {
   if (ls.length < 2) return '';
   var text  = ls.map(function(L){ return L.lot + ': ' + L.qty; }).join(' · ');
   var title = ls.map(function(L){ return L.lot + ' เหลือ ' + L.qty + (L.exp && L.exp !== '—' ? ' (หมด ' + L.exp + ')' : ''); }).join('\n');
-  return '<div class="lot-mini" title="' + title.replace(/"/g,'&quot;') + '" style="font-size:9.5px;font-weight:400;color:var(--g5);margin-top:2px;line-height:1.4;white-space:nowrap">🏷️ ' + text + '</div>';
+  return '<div class="lot-mini" title="' + title.replace(/"/g,'&quot;') + '" style="font-size:9.5px;font-weight:400;color:var(--g5);margin-top:2px;line-height:1.4">🏷️ ' + text + '</div>';
 }
 
 // ── ฟังก์ชันช่วย: render ตารางคลังพัสดุจาก ITEMS ──
@@ -5215,7 +5310,7 @@ function renderStockTable() {
 
 // ── โหลด ITEMS จาก Google Sheets (CSV) ──
 function loadFromSheets() {
-  var CSV_BASE = 'https://docs.google.com/spreadsheets/d/1LI_5pWF5XCxgMi8OhxXir42kiTpqpfUBat8egzGH4u4/gviz/tq?tqx=out:csv&sheet=';
+  var CSV_BASE = CSV_BASE_G;
   var SHEET_INFO = [
     {name:'สำนักงาน',                 cat:'📋 1.สำนักงาน',              icon:'📄'},
     {name:'งานบ้านงานครัว',           cat:'🧹 2.งานบ้าน',               icon:'🧹'},
@@ -5230,18 +5325,6 @@ function loadFromSheets() {
 
   var banner = document.getElementById('gs-status');
   if (banner) { banner.style.display='flex'; banner.style.background='#2c3e50'; banner.textContent='☁️ กำลังโหลดข้อมูลจาก Google Sheets...'; }
-
-  // โหลด CSV พร้อม retry — ฝั่ง Google ตอบ error เป็นพักๆ ลองซ้ำก่อนถือว่าพลาดจริง
-  function fetchCSVRetry(url, tries){
-    return fetch(url).then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.text();
-    }).catch(function(err){
-      if(tries <= 1) throw err;
-      return new Promise(function(res){ setTimeout(res, 800); })
-        .then(function(){ return fetchCSVRetry(url, tries-1); });
-    });
-  }
 
   var failedSheets = [];
   var promises = SHEET_INFO.map(function(sheet) {
@@ -5359,7 +5442,7 @@ function loadFromSheets() {
 }
 
 // ── บันทึก ITEMS ลง Google Sheets ──
-function handleExcelUpload(file){   if(!file) return;   var reader = new FileReader();   reader.onload = function(e){     var data = new Uint8Array(e.target.result);     var wb = XLSX.read(data,{type:'array'});     var ws = wb.Sheets[wb.SheetNames[0]];     var rows = XLSX.utils.sheet_to_json(ws,{defval:''});     processExcelRows(rows);   };   reader.readAsArrayBuffer(file); } function processExcelRows(rows){   var updated=0, grouped={};   rows.forEach(function(r){     var code=(r['รหัสพัสดุ']||r['รหัส']||'').toString().trim();     var name=(r['ชื่อพัสดุ']||r['ชื่อ']||'').toString().trim();     var qty=parseFloat(r['คงเหลือ']||r['จำนวน']||0)||0;     var lot=(r['Lot']||r['lot']||r['LOT']||'—').toString().trim()||'—';     var exp=(r['วันหมดอายุ']||r['exp']||'').toString().trim();     var mn=parseFloat(r['Min']||r['min']||0)||0;     var mx=parseFloat(r['Max']||r['max']||0)||0;     var loc=(r['ที่จัดเก็บ']||'').toString().trim();     if(!code&&!name) return;     if(!grouped[code]) grouped[code]={code:code,name:name,qty:0,min:mn,max:mx,loc:loc,lots:[]};     grouped[code].qty+=qty;     if(qty>0) grouped[code].lots.push({lot:lot,qty:qty,exp:exp||'—',recv:thaiDate(new Date())});   });   Object.keys(grouped).forEach(function(code){     var g=grouped[code];     var item=ITEMS.find(function(i){return i.code===code||i.name===g.name;});     if(item){       item.cur=g.qty;       if(g.min>0) item.min=g.min;       if(g.max>0) item.max=g.max;       if(g.loc) item.loc=g.loc;       if(g.lots.length>0) item.lots=g.lots;       item.status=item.cur<=0?'rd':item.cur<=item.min?'wn':'ok';       updated++;     }   });   updateDashStats(); updateDashLists(); syncStockTable(); filterStock();   alert('✅ อัปเดตแล้ว '+updated+' รายการค่ะ!S⚠️ ข้อมูลจะหายเมื่อรีเฟรช — กรุณา Commit ใน Google Sheets ด้วยนะคะ'); } function saveToSheets() {
+function saveToSheets() {
   if(!GS_ENABLED) return;
   var itemsToSave = ITEMS.map(function(item){
     return {
@@ -5392,6 +5475,95 @@ function logToSheets(txData) {
   .then(function(r){ if(!r.ok) console.warn('logToSheets ล้มเหลว: HTTP '+r.status); })
   .catch(function(err){ console.warn('logToSheets ล้มเหลว:', err); });
 }
+// ══════════════════════════════════════════════════════
+// สรุปเบิกรายเดือน — ควรเบิก = Max − คงเหลือ
+// ══════════════════════════════════════════════════════
+var REQ_CAT_ORDER = ['📋 1.สำนักงาน','🧹 2.งานบ้าน','🖨️ 3.สิ่งพิมพ์','🩺 4.การแพทย์','📦 5.อื่นๆ','⚡ 6.ไฟฟ้า','🔬 7.วิทยาศาสตร์การแพทย์','💉 9.Needle+Syringe','💉 8.เวชภัณฑ์มิใช่ยา'];
+var REQ_REF_ONLY = '💉 8.เวชภัณฑ์มิใช่ยา';   // เบิกได้ตลอด — แสดงเพื่ออ้างอิงเท่านั้น
+
+function buildReqGroups(mode){
+  var groups = [];
+  REQ_CAT_ORDER.forEach(function(cat){
+    var rows = ITEMS.filter(function(i){ return i.cat === cat; }).map(function(i){
+      var mx = parseFloat(i.max)||0, cur = parseFloat(i.cur)||0;
+      var need = mx > 0 ? Math.max(0, mx - cur) : null;   // ยังไม่ตั้ง Max → null (แสดง —)
+      return { code: i.code, name: i.name, unit: i.unit||'', min: parseFloat(i.min)||0, max: mx, cur: cur, need: need };
+    });
+    if(mode === 'need') rows = rows.filter(function(r){ return r.need !== null && r.need > 0; });
+    rows.sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); });
+    if(rows.length) groups.push({ cat: cat, rows: rows });
+  });
+  return groups;
+}
+
+function reqGroupsHtml(groups){
+  if(groups.length === 0){
+    return '<div style="text-align:center;padding:24px;color:var(--g4);font-size:13px">🎉 ไม่มีพัสดุที่ต้องเบิกเพิ่มในรอบนี้ค่ะ</div>';
+  }
+  return groups.map(function(g){
+    var note = g.cat === REQ_REF_ONLY ? ' <span style="font-weight:400;font-size:11px;color:#888">(เบิกได้ตลอด — แสดงเพื่ออ้างอิง ไม่ใช้เบิกรายเดือน)</span>' : '';
+    var body = g.rows.map(function(r,idx){
+      var needTxt = r.need === null ? '<span style="color:#999">—</span>'
+        : (r.need > 0 ? '<b style="color:#c0392b">'+r.need+'</b>' : '<span style="color:#2e7d32">0</span>');
+      return '<tr>'
+        + '<td style="text-align:center">'+(idx+1)+'</td>'
+        + '<td>'+r.code+'</td>'
+        + '<td>'+r.name+'</td>'
+        + '<td style="text-align:center">'+r.unit+'</td>'
+        + '<td style="text-align:center">'+r.min+'</td>'
+        + '<td style="text-align:center">'+(r.max||'—')+'</td>'
+        + '<td style="text-align:center">'+r.cur+'</td>'
+        + '<td style="text-align:center">'+needTxt+'</td>'
+        + '</tr>';
+    }).join('');
+    return '<div class="req-cat-title" style="font-weight:700;color:var(--nv);font-size:13px;margin:14px 0 4px">'+g.cat+note+' <span style="font-weight:400;color:#999;font-size:11px">· '+g.rows.length+' รายการ</span></div>'
+      + '<table class="req-table" style="width:100%;border-collapse:collapse;font-size:12px">'
+      + '<thead><tr><th style="width:34px">#</th><th style="width:80px">รหัส</th><th>ชื่อพัสดุ</th><th style="width:56px">หน่วย</th><th style="width:44px">Min</th><th style="width:44px">Max</th><th style="width:56px">คงเหลือ</th><th style="width:64px">ควรเบิก</th></tr></thead>'
+      + '<tbody>'+body+'</tbody></table>';
+  }).join('');
+}
+
+function renderReqSummary(){
+  var el = document.getElementById('req-print-area');
+  if(!el) return;
+  var mode = (document.getElementById('req-mode')||{}).value || 'need';
+  var groups = buildReqGroups(mode);
+  el.innerHTML = reqGroupsHtml(groups);
+  var total = 0, needSum = 0;
+  groups.forEach(function(g){ g.rows.forEach(function(r){ total++; if(r.need>0) needSum++; }); });
+  var cnt = document.getElementById('req-count');
+  if(cnt) cnt.textContent = 'แสดง '+total+' รายการ · ต้องเบิกเพิ่ม '+needSum+' รายการ';
+}
+
+// พิมพ์แบบหน้าสะอาด (เปิดหน้าต่างใหม่ A4)
+function printReqSummary(){
+  var mode = (document.getElementById('req-mode')||{}).value || 'need';
+  var modeTxt = mode==='need' ? 'เฉพาะที่ต้องเบิก' : 'แสดงทั้งหมด';
+  var groups = buildReqGroups(mode);
+  var now = new Date();
+  var w = window.open('', '_blank');
+  if(!w){ alert('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ — กรุณาอนุญาต popup ค่ะ'); return; }
+  w.document.write('<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>สรุปเบิกรายเดือน</title><style>'
+    + '@page{size:A4;margin:12mm}'
+    + 'body{font-family:"TH Sarabun New","Sarabun",Tahoma,sans-serif;color:#222;margin:0}'
+    + 'h1{font-size:19px;color:#1b2a4a;margin:0}'
+    + '.sub{font-size:13px;color:#777;margin:2px 0 10px;border-bottom:2px solid #1b2a4a;padding-bottom:6px}'
+    + '.req-cat-title{font-weight:700;font-size:14px;color:#1b2a4a;margin:12px 0 3px;page-break-after:avoid}'
+    + 'table{width:100%;border-collapse:collapse;font-size:12.5px;page-break-inside:auto}'
+    + 'tr{page-break-inside:avoid}'
+    + 'th{background:#eef1f6;border:1px solid #bbb;padding:3px 6px;font-size:12px}'
+    + 'td{border:1px solid #ccc;padding:3px 6px}'
+    + '.ft{font-size:11px;color:#999;margin-top:10px;text-align:center}'
+    + '</style></head><body>'
+    + '<h1>🧾 สรุปยอดที่ควรเบิกประจำรอบเดือน — ระบบพัสดุ ICU นวมินทร์ 1</h1>'
+    + '<div class="sub">พิมพ์เมื่อ '+now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'})+' '+now.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น. · โหมด: '+modeTxt+' · สูตร: ควรเบิก = Max − คงเหลือ · ใช้เป็นโน้ตช่วยจำ ไม่ใช่เอกสารทางการ</div>'
+    + reqGroupsHtml(groups)
+    + '<div class="ft">หอผู้ป่วยหนัก ICU นวมินทร์ 1 · โรงพยาบาลลำปาง · mymild3900.github.io/icu-nawamin1</div>'
+    + '</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.focus(); w.print(); }, 500);
+}
+
 function camAlert(){ /* ใช้ startQRScan แทนแล้ว */ }
 </script>
 </body>

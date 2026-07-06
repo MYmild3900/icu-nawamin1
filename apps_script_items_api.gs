@@ -6,7 +6,10 @@
 const SHEET_ID = '1LI_5pWF5XCxgMi8OhxXir42kiTpqpfUBat8egzGH4u4';
 
 // tab ที่ไม่ใช่ชีตหมวดพัสดุ — ห้ามอ่าน/เขียนเป็นรายการพัสดุ
-const NON_ITEM_SHEETS = ['ประวัติรายการ', 'Items', 'Log', 'ชีต2'];
+const NON_ITEM_SHEETS = ['ประวัติรายการ', 'Items', 'Log', 'ชีต2', 'Lot', 'Staff'];
+
+// อีเมลรับแจ้งเตือนประจำวัน
+const DIGEST_EMAIL = 'mymild.mildmy@gmail.com';
 
 function isItemSheet(sh) {
   if (NON_ITEM_SHEETS.indexOf(sh.getName()) !== -1) return false;
@@ -26,6 +29,8 @@ function doGet(e) {
       result = getItems();
     } else if (action === 'getLots') {
       result = getLots();
+    } else if (action === 'getStaff') {
+      result = getStaff();
     } else if (action === 'getLog') {
       result = getLog();
     } else {
@@ -50,6 +55,7 @@ function doPost(e) {
     else if (action === 'updateStock') result = updateStock(data.code, data.cur);
     else if (action === 'upsertLot')   result = upsertLot(data);
     else if (action === 'deductLot')   result = deductLot(data);
+    else if (action === 'saveStaff')   result = saveStaffList(data.staff);
     else if (action === 'addLot')      result = { error: 'addLot ถูกปิดการใช้งานแล้ว — ใช้ upsertLot/deductLot แทน (ไม่แทรกแถวในชีตพัสดุ)' };
     else result = { error: 'Unknown action' };
   } catch (err) {
@@ -286,6 +292,178 @@ function deductLot(data) {
   var next = Math.max(0, cur - (Number(data.qty) || 0));
   sheet.getRange(row, 4).setValue(next);
   return { ok: true, row: row, qty: next };
+}
+
+// ═══ บุคลากร (tab "Staff") — รายชื่อผู้ใช้ระบบ ═══
+
+function getStaffSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('Staff');
+  if (!sheet) {
+    sheet = ss.insertSheet('Staff');
+    sheet.getRange(1, 1, 1, 4).setValues([['id', 'name', 'pos', 'role']]);
+  }
+  return sheet;
+}
+
+function getStaff() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('Staff');
+  if (!sheet) return { ok: true, staff: [] };
+  var rows = sheet.getDataRange().getValues();
+  var staff = [];
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r[1]) continue;
+    staff.push({ id: Number(r[0]) || i, name: String(r[1]), pos: String(r[2] || ''), role: String(r[3] || 'user') });
+  }
+  return { ok: true, staff: staff };
+}
+
+// บันทึกรายชื่อทั้งชุด (snapshot แทนที่ของเดิม)
+function saveStaffList(staffArr) {
+  var sheet = getStaffSheet_();
+  var last = sheet.getLastRow();
+  if (last > 1) sheet.getRange(2, 1, last - 1, 4).clearContent();
+  var rows = (staffArr || []).map(function (s) {
+    return [Number(s.id) || '', String(s.name || ''), String(s.pos || ''), String(s.role || 'user')];
+  }).filter(function (r) { return r[1] !== ''; });
+  if (rows.length > 0) sheet.getRange(2, 1, rows.length, 4).setValues(rows);
+  return { ok: true, saved: rows.length };
+}
+
+// ═══ อีเมลแจ้งเตือนประจำวัน (หมดสต็อก / ใกล้หมด / หมดอายุ / ใกล้หมดอายุ) ═══
+
+// แปลงวันหมดอายุ → Date (รองรับ Date object, ISO, ปี พ.ศ., วว/ดด/ปปปป, ดด/ปป)
+function parseExpDateGS_(exp) {
+  if (exp === null || exp === undefined || exp === '' || exp === '—' || exp === '-') return null;
+  if (Object.prototype.toString.call(exp) === '[object Date]') {
+    if (isNaN(exp)) return null;
+    var yy = exp.getFullYear();
+    return (yy > 2400) ? new Date(yy - 543, exp.getMonth(), exp.getDate()) : exp;
+  }
+  var s = String(exp).trim();
+  var beCE = function (y) { if (y < 100) y += 2500; if (y > 2400) y -= 543; return y; };
+  var m3 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);   // วว/ดด/ปปปป
+  if (m3) {
+    var dd = parseInt(m3[1], 10), mo = parseInt(m3[2], 10), yr = beCE(parseInt(m3[3], 10));
+    if (mo >= 1 && mo <= 12 && dd >= 1 && dd <= 31) return new Date(yr, mo - 1, dd);
+  }
+  var m2 = s.match(/^(\d{1,2})[\/\-](\d{2,4})$/);                   // ดด/ปป → สิ้นเดือน
+  if (m2) {
+    var mo2 = parseInt(m2[1], 10), yr2 = beCE(parseInt(m2[2], 10));
+    if (mo2 >= 1 && mo2 <= 12) return new Date(yr2, mo2, 0);
+  }
+  var d = new Date(s);
+  if (!isNaN(d)) {
+    var y = d.getFullYear();
+    return (y > 2400) ? new Date(y - 543, d.getMonth(), d.getDate()) : d;
+  }
+  return null;
+}
+function daysToExpGS_(exp) {
+  var d = parseExpDateGS_(exp);
+  if (!d) return null;
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  d = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return Math.round((d - today) / 86400000);
+}
+function fmtD_(exp) {
+  var d = parseExpDateGS_(exp);
+  return d ? Utilities.formatDate(d, 'Asia/Bangkok', 'dd/MM/yyyy') : String(exp);
+}
+
+// รวบรวมข้อมูลแจ้งเตือนทั้ง 4 กลุ่ม
+function buildDigestData_() {
+  var items = getItems().items;
+  var outStock = items.filter(function (i) { return (Number(i.cur) || 0) <= 0; });
+  var low = items.filter(function (i) {
+    var c = Number(i.cur) || 0, m = Number(i.min) || 0;
+    return c > 0 && m > 0 && c <= m;
+  });
+  // วันหมดอายุ: จาก tab Lot (ราย lot ที่ยังมีของ) + จากคอลัมน์ exp ของชีตหมวด (ตัวที่ไม่มีใน Lot)
+  var seen = {};
+  var expired = [], soon = [];
+  function consider(name, lot, exp, qty) {
+    var dd = daysToExpGS_(exp);
+    if (dd === null) return;
+    var key = name + '|' + lot;
+    if (seen[key]) return;
+    seen[key] = true;
+    var row = { name: name, lot: lot || '—', exp: fmtD_(exp), days: dd, qty: qty };
+    if (dd < 0) expired.push(row);
+    else if (dd <= 90) soon.push(row);
+  }
+  getLots().lots.forEach(function (L) {
+    if ((Number(L.qty) || 0) <= 0) return;
+    consider(L.name || L.code, L.lot, L.exp, L.qty);
+  });
+  items.forEach(function (i) {
+    if ((Number(i.cur) || 0) <= 0) return;
+    consider(i.name, i.lot, i.exp, i.cur);
+  });
+  expired.sort(function (a, b) { return a.days - b.days; });
+  soon.sort(function (a, b) { return a.days - b.days; });
+  return { outStock: outStock, low: low, expired: expired, soon: soon };
+}
+
+function digestHtml_(d) {
+  function sec(title, color, rowsHtml) {
+    if (!rowsHtml) return '';
+    return '<h3 style="color:' + color + ';margin:16px 0 6px;font-size:15px">' + title + '</h3>'
+      + '<table style="border-collapse:collapse;width:100%;font-size:13px">' + rowsHtml + '</table>';
+  }
+  function tr(cells) {
+    return '<tr>' + cells.map(function (c) {
+      return '<td style="border:1px solid #ddd;padding:5px 8px">' + c + '</td>';
+    }).join('') + '</tr>';
+  }
+  var h = '';
+  h += sec('🚫 ของหมดอายุแล้ว — ห้ามใช้ ต้องนำออกทันที (' + d.expired.length + ')', '#8e1b0f',
+    d.expired.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'เลยกำหนด ' + (-r.days) + ' วัน']); }).join(''));
+  h += sec('⏰ ใกล้ถึงวันหมดอายุ ภายใน 90 วัน (' + d.soon.length + ')', '#b26a00',
+    d.soon.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'อีก ' + r.days + ' วัน']); }).join(''));
+  h += sec('🔴 หมดสต็อก — คงเหลือ 0 (' + d.outStock.length + ')', '#c0392b',
+    d.outStock.map(function (i) { return tr([i.name, String(i.cat || ''), 'Min ' + (i.min || 0)]); }).join(''));
+  h += sec('🟡 ใกล้หมดสต็อก — ถึงจุดต่ำสุด (' + d.low.length + ')', '#b26a00',
+    d.low.map(function (i) { return tr([i.name, String(i.cat || ''), 'เหลือ ' + i.cur + ' (Min ' + i.min + ')']); }).join(''));
+  return '<div style="font-family:Tahoma,sans-serif;max-width:640px">'
+    + '<h2 style="color:#1b2a4a;margin:0 0 4px">📦 ระบบพัสดุ ICU นวมินทร์ 1 — แจ้งเตือนประจำวัน</h2>'
+    + '<div style="color:#777;font-size:12px;margin-bottom:8px">' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm') + ' น. · โรงพยาบาลลำปาง</div>'
+    + h
+    + '<div style="color:#999;font-size:11px;margin-top:16px">เปิดระบบ: https://mymild3900.github.io/icu-nawamin1/</div></div>';
+}
+
+// ส่งอีเมลแจ้งเตือน — ส่งเฉพาะวันที่มีเรื่องต้องเตือน (trigger เรียกทุกวัน ~08:00)
+function dailyDigest() {
+  var d = buildDigestData_();
+  var total = d.outStock.length + d.low.length + d.expired.length + d.soon.length;
+  if (total === 0) return;   // ไม่มีอะไรต้องเตือน — ไม่ส่ง
+  var subject = '[พัสดุ ICU1] แจ้งเตือน: หมดอายุแล้ว ' + d.expired.length
+    + ' · ใกล้หมดอายุ ' + d.soon.length
+    + ' · หมดสต็อก ' + d.outStock.length
+    + ' · ใกล้หมด ' + d.low.length;
+  MailApp.sendEmail({ to: DIGEST_EMAIL, subject: subject, htmlBody: digestHtml_(d) });
+}
+
+// ▶ กดรันครั้งเดียว: ตั้งเวลาส่งอัตโนมัติทุกวัน 08:00-09:00 น.
+function setupDailyTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'dailyDigest') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('dailyDigest').timeBased().everyDays(1).atHour(8).create();
+  Logger.log('ตั้งเวลาส่งแจ้งเตือนทุกวัน 08:00-09:00 น. เรียบร้อย');
+}
+
+// ▶ กดรันเพื่อทดสอบส่งอีเมลทันที (ส่งเสมอแม้ไม่มีเรื่องเตือน)
+function sendTestDigest() {
+  var d = buildDigestData_();
+  var total = d.outStock.length + d.low.length + d.expired.length + d.soon.length;
+  var body = total === 0
+    ? '<div style="font-family:Tahoma">✅ (ทดสอบ) วันนี้ไม่มีพัสดุที่ต้องเตือนค่ะ</div>'
+    : digestHtml_(d);
+  MailApp.sendEmail({ to: DIGEST_EMAIL, subject: '[พัสดุ ICU1] ทดสอบระบบแจ้งเตือนอีเมล', htmlBody: body });
+  Logger.log('ส่งอีเมลทดสอบไปที่ ' + DIGEST_EMAIL + ' แล้ว (รายการเตือนรวม ' + total + ')');
 }
 
 // ── ทดสอบด้วยมือใน editor ──
