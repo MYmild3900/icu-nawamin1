@@ -8,8 +8,8 @@ const SHEET_ID = '1LI_5pWF5XCxgMi8OhxXir42kiTpqpfUBat8egzGH4u4';
 // tab ที่ไม่ใช่ชีตหมวดพัสดุ — ห้ามอ่าน/เขียนเป็นรายการพัสดุ
 const NON_ITEM_SHEETS = ['ประวัติรายการ', 'Items', 'Log', 'ชีต2', 'Lot', 'Staff'];
 
-// อีเมลรับแจ้งเตือนประจำวัน
-const DIGEST_EMAIL = 'mymild.mildmy@gmail.com';
+// อีเมลรับแจ้งเตือนประจำวัน — ใส่ได้หลายคน คั่นด้วย , (คนที่ 2 = อีเมลหอผู้ป่วย)
+const DIGEST_EMAIL = 'mymild.mildmy@gmail.com,icutrauma2025@gmail.com';
 
 function isItemSheet(sh) {
   if (NON_ITEM_SHEETS.indexOf(sh.getName()) !== -1) return false;
