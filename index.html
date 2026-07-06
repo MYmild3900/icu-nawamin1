@@ -518,6 +518,13 @@ tr:hover td{background:var(--wh)}
         </div>
       </div>
     </div>
+    <div class="card" style="margin-top:12px">
+      <div class="ct2">⏰ แจ้งเตือนหมดอายุล่วงหน้า (ภายใน 90 วัน)</div>
+      <div style="font-size:10px;color:var(--g5);margin-bottom:6px">🔴 หมดอายุแล้ว / ≤30 วัน · 🟠 ≤60 วัน · 🟡 ≤90 วัน</div>
+      <div id="dash-expiry-list">
+        <div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">กำลังตรวจสอบวันหมดอายุ...</div>
+      </div>
+    </div>
     <div class="card" style="display:flex;gap:14px;align-items:center;padding:12px 16px">
       <span style="font-size:30px">💊</span>
       <div style="flex:1">
@@ -4842,8 +4849,75 @@ function selectHistItem(el, name){
 }
 
 // ── อัปเดต dashboard top5 และ urgent จาก ITEMS จริง ──
+// ── วันหมดอายุ: แปลงเป็น Date (รองรับ ISO, ปี พ.ศ., รูปแบบ เดือน/ปี) ──
+function parseExpDate(exp){
+  if(!exp || exp==='—' || exp==='-') return null;
+  var s = String(exp).trim();
+  // รูปแบบ เดือน/ปี เช่น 10/70 หรือ 08/2027 → วันสุดท้ายของเดือน
+  var m = s.match(/^(\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){
+    var mo = parseInt(m[1],10);
+    var yr = parseInt(m[2],10);
+    if(yr < 100) yr += 2500;       // 70 → 2570 (พ.ศ.)
+    if(yr > 2400) yr -= 543;       // พ.ศ. → ค.ศ.
+    if(mo>=1 && mo<=12) return new Date(yr, mo, 0); // วันสุดท้ายของเดือน
+  }
+  var d = new Date(s);
+  if(!isNaN(d)){
+    var y = d.getFullYear();
+    return (y > 2400) ? new Date(y-543, d.getMonth(), d.getDate()) : d;
+  }
+  return null;
+}
+function daysToExp(exp){
+  var d = parseExpDate(exp);
+  if(!d) return null;
+  var today = new Date(); today.setHours(0,0,0,0);
+  return Math.round((d - today) / 86400000);
+}
+// หาล็อตที่ใกล้หมดอายุสุด (ที่ยังมีของ) ของพัสดุแต่ละตัว
+function soonestExpLot(item){
+  var best=null, bestDays=null;
+  (item.lots||[]).forEach(function(L){
+    if((parseFloat(L.qty)||0) <= 0) return;
+    var dd = daysToExp(L.exp);
+    if(dd===null) return;
+    if(bestDays===null || dd < bestDays){ bestDays=dd; best=L; }
+  });
+  return best ? { lot:best, days:bestDays } : null;
+}
+// แผงแจ้งเตือนหมดอายุล่วงหน้า 30/60/90 วัน
+function renderExpiryAlerts(){
+  var el = document.getElementById('dash-expiry-list');
+  if(!el) return;
+  var rows=[];
+  ITEMS.forEach(function(item){
+    var se = soonestExpLot(item);
+    if(!se || se.days > 90) return;   // เฉพาะ ≤90 วัน และที่หมดอายุแล้ว
+    rows.push({ item:item, lot:se.lot, days:se.days });
+  });
+  rows.sort(function(a,b){ return a.days - b.days; });
+  if(rows.length===0){
+    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">🎉 ไม่มีพัสดุใกล้หมดอายุใน 90 วันค่ะ</div>';
+    return;
+  }
+  el.innerHTML = rows.slice(0,8).map(function(r){
+    var d=r.days, col, tag;
+    if(d<0){ col='#8e1b0f'; tag='หมดอายุแล้ว '+(-d)+' วัน'; }
+    else if(d<=30){ col='var(--rd-t)'; tag='อีก '+d+' วัน'; }
+    else if(d<=60){ col='#d17a00'; tag='อีก '+d+' วัน'; }
+    else { col='#b8860b'; tag='อีก '+d+' วัน'; }
+    var expTxt = (r.lot.exp && r.lot.exp!=='—') ? ' · หมด '+r.lot.exp : '';
+    return '<div class="ai"><span class="ad" style="background:'+col+'"></span>'
+      +'<span style="flex:1;font-size:12px">'+r.item.name
+      +'<span style="color:var(--g4);font-size:10px"> · Lot '+(r.lot.lot||'—')+expTxt+'</span></span>'
+      +'<span style="font-weight:700;font-size:11px;color:'+col+'">'+tag+'</span></div>';
+  }).join('');
+}
+
 function updateDashLists(){
   doQS('');
+  renderExpiryAlerts();
   // Urgent list
   var urgentEl = document.getElementById('dash-urgent-list');
   if(urgentEl){
