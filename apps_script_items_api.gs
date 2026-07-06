@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════
 // ICU Nawamin1 — Apps Script v3 (Items API)
-// สำเนาโค้ดที่ต้อง deploy ในโปรเจกต์ "Code จาก Gemini"
+// สำเนาโค้ดที่ต้อง deploy ในโปรเจกต์ "Code จาก claude"
 // ═══════════════════════════════════════════════════
 
 const SHEET_ID = '1LI_5pWF5XCxgMi8OhxXir42kiTpqpfUBat8egzGH4u4';
