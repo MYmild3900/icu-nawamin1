@@ -497,11 +497,11 @@ tr:hover td{background:var(--wh)}
       </div>
       <div class="sc w" onclick="goStockFilter('wn',this)" style="cursor:pointer;transition:transform .12s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
         <div class="sc-ic">⚠️</div>
-        <div><div class="sc-lb">ใกล้หมด/อายุ</div><div class="sc-nm">24</div><div class="sc-sb">ต้องติดตาม · กดเพื่อดู ›</div></div>
+        <div><div class="sc-lb">ใกล้หมด (สต็อก)</div><div class="sc-nm">24</div><div class="sc-sb">ต้องติดตาม · กดเพื่อดู ›</div></div>
       </div>
       <div class="sc r" onclick="goStockFilter('rd',this)" style="cursor:pointer;transition:transform .12s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
         <div class="sc-ic">🚨</div>
-        <div><div class="sc-lb">หมด/หมดอายุ</div><div class="sc-nm">2</div><div class="sc-sb">ด่วน! · กดเพื่อดู ›</div></div>
+        <div><div class="sc-lb">หมดสต็อก</div><div class="sc-nm">2</div><div class="sc-sb">ด่วน! · กดเพื่อดู ›</div></div>
       </div>
     </div>
     <div class="dg">
@@ -519,8 +519,8 @@ tr:hover td{background:var(--wh)}
       </div>
     </div>
     <div class="card" style="margin-top:12px">
-      <div class="ct2">⏰ แจ้งเตือนหมดอายุล่วงหน้า (ภายใน 90 วัน)</div>
-      <div style="font-size:10px;color:var(--g5);margin-bottom:6px">🔴 หมดอายุแล้ว / ≤30 วัน · 🟠 ≤60 วัน · 🟡 ≤90 วัน</div>
+      <div class="ct2">⏰ แจ้งเตือนวันหมดอายุ (ของหมดอายุ + ใกล้ถึงวันหมดอายุ ภายใน 90 วัน)</div>
+      <div style="font-size:10px;color:var(--g5);margin-bottom:6px">🟥 ของหมดอายุแล้ว · 🔴 ใกล้หมด ≤30 วัน · 🟠 ≤60 วัน · 🟡 ≤90 วัน &nbsp;|&nbsp; หมายเหตุ: คนละเรื่องกับ "หมดสต็อก" (คงเหลือ = 0)</div>
       <div id="dash-expiry-list">
         <div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">กำลังตรวจสอบวันหมดอายุ...</div>
       </div>
@@ -4853,15 +4853,20 @@ function selectHistItem(el, name){
 function parseExpDate(exp){
   if(!exp || exp==='—' || exp==='-') return null;
   var s = String(exp).trim();
-  // รูปแบบ เดือน/ปี เช่น 10/70 หรือ 08/2027 → วันสุดท้ายของเดือน
-  var m = s.match(/^(\d{1,2})[\/\-](\d{2,4})$/);
-  if(m){
-    var mo = parseInt(m[1],10);
-    var yr = parseInt(m[2],10);
-    if(yr < 100) yr += 2500;       // 70 → 2570 (พ.ศ.)
-    if(yr > 2400) yr -= 543;       // พ.ศ. → ค.ศ.
-    if(mo>=1 && mo<=12) return new Date(yr, mo, 0); // วันสุดท้ายของเดือน
+  var beCE = function(y){ if(y<100) y+=2500; if(y>2400) y-=543; return y; }; // ปีย่อ/พ.ศ. → ค.ศ.
+  // วว/ดด/ปปปป แบบไทย เช่น 30/07/2569
+  var m3 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m3){
+    var dd=parseInt(m3[1],10), mo=parseInt(m3[2],10), yr=beCE(parseInt(m3[3],10));
+    if(mo>=1 && mo<=12 && dd>=1 && dd<=31) return new Date(yr, mo-1, dd);
   }
+  // ดด/ปป หรือ ดด/ปปปป เช่น 10/70, 08/2027 → วันสุดท้ายของเดือน
+  var m2 = s.match(/^(\d{1,2})[\/\-](\d{2,4})$/);
+  if(m2){
+    var mo2=parseInt(m2[1],10), yr2=beCE(parseInt(m2[2],10));
+    if(mo2>=1 && mo2<=12) return new Date(yr2, mo2, 0);
+  }
+  // ISO เช่น 2026-09-01 หรือ 2569-09-01 (พ.ศ.)
   var d = new Date(s);
   if(!isNaN(d)){
     var y = d.getFullYear();
@@ -4890,29 +4895,38 @@ function soonestExpLot(item){
 function renderExpiryAlerts(){
   var el = document.getElementById('dash-expiry-list');
   if(!el) return;
-  var rows=[];
+  var expired=[], soon=[];
   ITEMS.forEach(function(item){
     var se = soonestExpLot(item);
-    if(!se || se.days > 90) return;   // เฉพาะ ≤90 วัน และที่หมดอายุแล้ว
-    rows.push({ item:item, lot:se.lot, days:se.days });
+    if(!se) return;
+    if(se.days < 0) expired.push({ item:item, lot:se.lot, days:se.days });      // ของหมดอายุแล้ว
+    else if(se.days <= 90) soon.push({ item:item, lot:se.lot, days:se.days });   // ใกล้ถึงวันหมดอายุ
   });
-  rows.sort(function(a,b){ return a.days - b.days; });
-  if(rows.length===0){
-    el.innerHTML='<div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">🎉 ไม่มีพัสดุใกล้หมดอายุใน 90 วันค่ะ</div>';
-    return;
-  }
-  el.innerHTML = rows.slice(0,8).map(function(r){
+  expired.sort(function(a,b){ return a.days-b.days; });
+  soon.sort(function(a,b){ return a.days-b.days; });
+  function row(r, isExpired){
     var d=r.days, col, tag;
-    if(d<0){ col='#8e1b0f'; tag='หมดอายุแล้ว '+(-d)+' วัน'; }
+    if(isExpired){ col='#8e1b0f'; tag='เลยกำหนด '+(-d)+' วัน'; }
     else if(d<=30){ col='var(--rd-t)'; tag='อีก '+d+' วัน'; }
     else if(d<=60){ col='#d17a00'; tag='อีก '+d+' วัน'; }
     else { col='#b8860b'; tag='อีก '+d+' วัน'; }
-    var expTxt = (r.lot.exp && r.lot.exp!=='—') ? ' · หมด '+r.lot.exp : '';
+    var expTxt = (r.lot.exp && r.lot.exp!=='—') ? ' · หมดอายุ '+r.lot.exp : '';
     return '<div class="ai"><span class="ad" style="background:'+col+'"></span>'
       +'<span style="flex:1;font-size:12px">'+r.item.name
       +'<span style="color:var(--g4);font-size:10px"> · Lot '+(r.lot.lot||'—')+expTxt+'</span></span>'
       +'<span style="font-weight:700;font-size:11px;color:'+col+'">'+tag+'</span></div>';
-  }).join('');
+  }
+  var html='';
+  if(expired.length){
+    html+='<div style="font-size:12px;font-weight:700;color:#8e1b0f;margin:2px 0 4px">🚫 ของหมดอายุแล้ว — ห้ามใช้ ต้องนำออกทันที ('+expired.length+' รายการ)</div>';
+    html+=expired.slice(0,6).map(function(r){ return row(r,true); }).join('');
+  }
+  if(soon.length){
+    html+='<div style="font-size:12px;font-weight:700;color:var(--wn-t);margin:'+(expired.length?'10px':'2px')+' 0 4px">⏰ ใกล้ถึงวันหมดอายุ — เตรียมใช้ก่อน ('+soon.length+' รายการ)</div>';
+    html+=soon.slice(0,8).map(function(r){ return row(r,false); }).join('');
+  }
+  if(!html){ html='<div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">🎉 ไม่มีพัสดุหมดอายุ หรือใกล้หมดอายุใน 90 วันค่ะ</div>'; }
+  el.innerHTML = html;
 }
 
 function updateDashLists(){
