@@ -3125,7 +3125,8 @@ function showQRCode(code,name){
   const div=document.getElementById('qrcode-div');
   div.innerHTML='';
   try{
-    new QRCode(div,{text:code+'|'+name,width:160,height:160,colorDark:'#032A42',colorLight:'#ffffff'});
+    // เก็บเฉพาะรหัสพัสดุ (ตัวเลข/ASCII) — ไม่ฝังชื่อไทย เพราะทำให้ QR แน่น/เพี้ยนจนสแกนไม่ได้
+    new QRCode(div,{text:String(code),width:160,height:160,colorDark:'#032A42',colorLight:'#ffffff'});
   }catch(e){
     div.innerHTML='<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(code)+'" width="160" height="160" style="border-radius:6px">';
   }
@@ -3953,15 +3954,20 @@ function startQRDecode(video, mode){
 }
 
 function handleQRResult(code, mode){
-  // หา item จาก ITEMS database
-  const item = ITEMS.find(i =>
-    i.code.toLowerCase() === code.toLowerCase() ||
-    i.name.toLowerCase().includes(code.toLowerCase()) ||
-    code.toLowerCase().includes(i.name.toLowerCase())
-  );
+  // QR ใหม่เก็บเฉพาะรหัส แต่ QR เก่าอาจเป็น "รหัส|ชื่อ" — ตัดเอาส่วนหน้า "|" เป็นรหัส
+  var scanned = String(code||'').split('|')[0].trim();
+  var sl = scanned.toLowerCase();
+  // จับคู่ด้วยรหัสแบบตรงตัวก่อน (แม่นสุด) แล้วค่อย fallback ด้วยชื่อ
+  var item = ITEMS.find(function(i){ return String(i.code).toLowerCase() === sl; });
+  if(!item && sl){
+    item = ITEMS.find(function(i){
+      var n = (i.name||'').toLowerCase();
+      return n === sl || n.includes(sl) || sl.includes(n);
+    });
+  }
 
   if(!item){
-    document.getElementById('qr-scan-status').textContent = '❌ ไม่พบพัสดุรหัส: '+code;
+    document.getElementById('qr-scan-status').textContent = '❌ ไม่พบพัสดุรหัส: '+scanned;
     setTimeout(()=>{ document.getElementById('qr-scan-status').textContent='📷 สแกนอีกครั้ง...'; }, 2000);
     return;
   }
