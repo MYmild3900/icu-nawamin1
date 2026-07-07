@@ -600,6 +600,7 @@ tr:hover td{background:var(--wh)}
         </select>
         <!-- ⑤ เพิ่มพัสดุ (ไม่มี QR แล้ว) -->
         <button class="btn pr" onclick="openAddItem()" style="white-space:nowrap">➕ เพิ่มพัสดุ</button>
+        <button class="btn" onclick="printQRSheet()" title="พิมพ์สติกเกอร์ QR ตามหมวดที่เลือกด้านบน (A4 · 3 คอลัมน์)" style="white-space:nowrap">🖨 พิมพ์ QR</button>
       </div>
       <table>
         <thead><tr><th>รูป</th><th>รหัส</th><th>ชื่อพัสดุ</th><th>หมวด</th><th>หน่วย</th><th>Min</th><th>Max</th><th>คงเหลือ</th><th>📍 ที่จัดเก็บ</th><th>🔄 ทำรายการล่าสุด</th><th>⏰ หมดอายุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
@@ -5566,6 +5567,81 @@ function printReqSummary(){
     + '</body></html>');
   w.document.close();
   setTimeout(function(){ w.focus(); w.print(); }, 500);
+}
+
+// ── พิมพ์สติกเกอร์ QR แยกตามหมวด (A4 · 3 คอลัมน์ · แต่ละหมวดขึ้นหน้าใหม่) ──
+function printQRSheet(){
+  var sel = document.getElementById('stock-cat-sel');
+  var cat = sel ? sel.value : '';
+  var items = ITEMS.filter(function(i){ return !cat || i.cat === cat; });
+  if(items.length === 0){ alert('ไม่มีพัสดุในหมวดที่เลือกค่ะ'); return; }
+
+  // จัดกลุ่มตามหมวด (ลำดับเดียวกับสรุปเบิก — หมวดที่ไม่อยู่ในลำดับต่อท้าย)
+  var groups = [], used = {};
+  REQ_CAT_ORDER.forEach(function(c){
+    var rows = items.filter(function(i){ return i.cat === c; });
+    if(rows.length){ groups.push({cat:c, rows:rows}); used[c] = 1; }
+  });
+  var leftover = {};
+  items.forEach(function(i){ if(!used[i.cat]) leftover[i.cat] = 1; });
+  Object.keys(leftover).forEach(function(c){
+    groups.push({cat: c || 'ไม่ระบุหมวด', rows: items.filter(function(i){ return i.cat === c; })});
+  });
+  groups.forEach(function(g){ g.rows.sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); }); });
+
+  // สร้าง QR เป็น dataURL ในหน้าหลักก่อน แล้วค่อยฝังลงหน้าพิมพ์ (encode เฉพาะรหัส — สแกนชัวร์)
+  var holder = document.createElement('div');
+  holder.style.cssText = 'position:absolute;left:-9999px;top:0';
+  document.body.appendChild(holder);
+  function qrData(code){
+    holder.innerHTML = '';
+    try{
+      var opt = {text:String(code), width:120, height:120, colorDark:'#032A42', colorLight:'#ffffff'};
+      if(window.QRCode && QRCode.CorrectLevel) opt.correctLevel = QRCode.CorrectLevel.H;
+      new QRCode(holder, opt);
+      var cv = holder.querySelector('canvas'); if(cv) return cv.toDataURL('image/png');
+      var im = holder.querySelector('img'); if(im && im.src) return im.src;
+    }catch(e){}
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(code);
+  }
+
+  var body = '';
+  groups.forEach(function(g, gi){
+    body += '<div class="cat' + (gi > 0 ? ' brk' : '') + '">' + g.cat + ' <span class="cnt">(' + g.rows.length + ' รายการ)</span></div><div class="grid">';
+    g.rows.forEach(function(it){
+      body += '<div class="cell"><img src="' + qrData(it.code) + '" alt="QR">'
+        + '<div class="nm">' + it.name + '</div>'
+        + '<div class="cd">' + it.code + (it.unit ? ' · ' + it.unit : '') + '</div></div>';
+    });
+    body += '</div>';
+  });
+  document.body.removeChild(holder);
+
+  var now = new Date();
+  var w = window.open('', '_blank');
+  if(!w){ alert('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ — กรุณาอนุญาต popup ค่ะ'); return; }
+  w.document.write('<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>สติกเกอร์ QR พัสดุ</title><style>'
+    + '@page{size:A4;margin:10mm}'
+    + 'body{font-family:"TH Sarabun New","Sarabun",Tahoma,sans-serif;color:#222;margin:0}'
+    + 'h1{font-size:18px;color:#1b2a4a;margin:0}'
+    + '.sub{font-size:12.5px;color:#777;margin:2px 0 8px;border-bottom:2px solid #1b2a4a;padding-bottom:5px}'
+    + '.cat{font-weight:700;font-size:15px;color:#1b2a4a;margin:8px 0 4px;page-break-after:avoid}'
+    + '.cat.brk{page-break-before:always}'
+    + '.cnt{font-weight:400;font-size:12px;color:#888}'
+    + '.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}'
+    + '.cell{border:1.2px dashed #999;border-radius:6px;padding:3mm 2mm;text-align:center;page-break-inside:avoid}'
+    + '.cell img{width:24mm;height:24mm}'
+    + '.nm{font-size:12.5px;font-weight:700;line-height:1.25;margin-top:1.5mm;word-break:break-word}'
+    + '.cd{font-size:11px;color:#555;margin-top:0.5mm}'
+    + '.ft{font-size:11px;color:#999;margin-top:8px;text-align:center}'
+    + '</style></head><body>'
+    + '<h1>⬜ สติกเกอร์ QR Code พัสดุ — ระบบพัสดุ ICU นวมินทร์ 1</h1>'
+    + '<div class="sub">พิมพ์เมื่อ ' + now.toLocaleDateString('th-TH',{day:'numeric',month:'long',year:'numeric'}) + ' · ' + (cat ? 'หมวด: ' + cat : 'ทุกหมวด (แต่ละหมวดขึ้นหน้าใหม่)') + ' · รวม ' + items.length + ' รายการ · สแกนด้วยกล้องในระบบเพื่อค้นหา/ทำรายการ</div>'
+    + body
+    + '<div class="ft">หอผู้ป่วยหนัก ICU นวมินทร์ 1 · โรงพยาบาลลำปาง · ตัดตามรอยประเพื่อนำไปติดชั้นเก็บ/กล่องพัสดุ</div>'
+    + '</body></html>');
+  w.document.close();
+  setTimeout(function(){ w.focus(); w.print(); }, 600);
 }
 
 function camAlert(){ /* ใช้ startQRScan แทนแล้ว */ }
