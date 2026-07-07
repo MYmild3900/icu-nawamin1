@@ -466,6 +466,51 @@ function sendTestDigest() {
   Logger.log('ส่งอีเมลทดสอบไปที่ ' + DIGEST_EMAIL + ' แล้ว (รายการเตือนรวม ' + total + ')');
 }
 
+// ═══════════ สำรองข้อมูลอัตโนมัติรายสัปดาห์ ═══════════
+// คัดลอกสเปรดชีตทั้งไฟล์เก็บในโฟลเดอร์ "สำรองข้อมูล พัสดุICU1" ใน Google Drive
+// เก็บย้อนหลัง 8 ชุดล่าสุด — ชุดเก่ากว่านั้นย้ายลงถังขยะอัตโนมัติ
+
+const BACKUP_FOLDER_NAME = 'สำรองข้อมูล พัสดุICU1';
+const BACKUP_KEEP = 8; // จำนวนสำเนาที่เก็บไว้
+
+function getBackupFolder_() {
+  var it = DriveApp.getFoldersByName(BACKUP_FOLDER_NAME);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(BACKUP_FOLDER_NAME);
+}
+
+function weeklyBackup() {
+  var folder = getBackupFolder_();
+  var src = DriveApp.getFileById(SHEET_ID);
+  var d = new Date();
+  var stamp = Utilities.formatDate(d, 'Asia/Bangkok', 'yyyy-MM-dd HH:mm');
+  var copy = src.makeCopy('สำรอง พัสดุICU1 ' + stamp, folder);
+
+  // ลบสำเนาเก่า เหลือไว้ BACKUP_KEEP ชุดล่าสุด
+  var files = [];
+  var it = folder.getFiles();
+  while (it.hasNext()) {
+    var f = it.next();
+    if (f.getName().indexOf('สำรอง พัสดุICU1') === 0) files.push(f);
+  }
+  files.sort(function (a, b) { return b.getDateCreated() - a.getDateCreated(); });
+  for (var i = BACKUP_KEEP; i < files.length; i++) files[i].setTrashed(true);
+
+  Logger.log('สำรองข้อมูลแล้ว: ' + copy.getName() + ' (เก็บย้อนหลัง ' + Math.min(files.length, BACKUP_KEEP) + ' ชุด)');
+  return copy.getName();
+}
+
+// ▶ กดรันครั้งเดียว: ตั้งสำรองข้อมูลอัตโนมัติทุกวันจันทร์ 07:00-08:00 น.
+function setupWeeklyBackupTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'weeklyBackup') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('weeklyBackup').timeBased().everyWeeks(1)
+    .onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(7).create();
+  // สำรองทันที 1 ชุดเป็นชุดแรก
+  var name = weeklyBackup();
+  Logger.log('ตั้งสำรองข้อมูลอัตโนมัติทุกวันจันทร์ 07:00-08:00 น. เรียบร้อย (ชุดแรก: ' + name + ')');
+}
+
 // ── ทดสอบด้วยมือใน editor ──
 function testUpdateStock() {
   Logger.log(JSON.stringify(updateStock('60101009', 5)));
