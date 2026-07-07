@@ -437,6 +437,7 @@ tr:hover td{background:var(--wh)}
     <div class="ni" onclick="go('hist',this)">🕐 ประวัติรายการ</div>
     <div class="ni" onclick="go('rpt',this)">📈 รายงาน</div>
     <div class="ni" onclick="go('req',this)">🧾 สรุปเบิกรายเดือน</div>
+    <div class="ni" onclick="go('count',this)">📋 นับสต็อก</div>
     <div class="ni" onclick="go('sc',this)">🗂️ Stock Card</div>
   </div>
   <div class="ns">
@@ -2146,6 +2147,7 @@ tr:hover td{background:var(--wh)}
           <option value="all">ทั้งหมด</option>
           <option value="recv">📥 รับเข้า</option>
           <option value="wd">📤 เบิกออก</option>
+          <option value="adj">📋 ปรับยอด</option>
         </select>
         <div style="display:flex;gap:6px;flex:1;min-width:180px">
           <div class="ac-wrap" style="flex:1;position:relative">
@@ -2308,6 +2310,22 @@ tr:hover td{background:var(--wh)}
       <div id="req-print-area">
         <div style="text-align:center;padding:24px;color:var(--g4);font-size:12px">กำลังคำนวณ...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- STOCK COUNT / นับสต็อก ปรับยอด -->
+  <div id="pg-count" class="pg">
+    <div class="ps">ตรวจนับของจริงทีละหมวด แล้วปรับยอดในระบบให้ตรง — บันทึกลงประวัติเป็น "ปรับยอด" ทุกรายการ</div>
+    <div class="card">
+      <div class="bar" style="flex-wrap:wrap;gap:8px">
+        <select id="count-cat" class="sel" onchange="renderCountTable()" style="min-width:220px"></select>
+        <span id="count-info" style="font-size:11px;color:var(--g4);flex:1;min-width:180px">กรอกเฉพาะรายการที่ยอดไม่ตรง — ช่องที่เว้นว่างจะไม่ถูกแก้</span>
+        <button class="btn pr" onclick="saveStockCount()">💾 บันทึกการปรับยอด</button>
+      </div>
+      <table>
+        <thead><tr><th style="width:90px">รหัส</th><th>ชื่อพัสดุ</th><th style="width:60px">หน่วย</th><th style="width:90px">ยอดในระบบ</th><th style="width:110px">นับได้จริง</th><th style="width:90px">ส่วนต่าง</th></tr></thead>
+        <tbody id="count-tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -2734,7 +2752,7 @@ function doLogin(){
 document.getElementById('upw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 function doLogout(){if(confirm('ต้องการออกจากระบบ?')){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('usel').value='';document.getElementById('upw').value=''}}
 
-const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',req:'สรุปเบิกรายเดือน',sc:'Stock Card',qr:'สแกน QR Code',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
+const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',req:'สรุปเบิกรายเดือน',count:'นับสต็อก / ปรับยอด',sc:'Stock Card',qr:'สแกน QR Code',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
 function go(id,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
@@ -2745,6 +2763,7 @@ function go(id,el){
   if(id==='wd'||id==='recv') setTimeout(syncACLists,80);
   if(id==='rpt') setTimeout(renderReport,50);
   if(id==='req') setTimeout(renderReqSummary,50);
+  if(id==='count') setTimeout(renderCountPage,50);
   if(id==='cfg') setTimeout(renderStaffTable,50);
   if(id==='dash') setTimeout(function(){ updateDashStats(); updateDashLists(); },50);
 }
@@ -3446,6 +3465,16 @@ function selectWdItem(el, code){
 
 function selectLot(el, item, idx){
   var container = el.closest('.wd-item-row');
+  // Poka-Yoke แบบเข้ม: เลือกข้ามล็อตที่หมดอายุก่อน ต้องยืนยันก่อน ไม่งั้นดีดกลับล็อตแรก
+  if(idx > 0 && item.lots && item.lots[0]){
+    var fl = item.lots[0];
+    var okSkip = confirm('⚠️ ตามหลัก FEFO ควรใช้ล็อต ' + fl.lot + ' ก่อน\n(หมดอายุ ' + fl.exp + ' · เหลือ ' + fl.qty + ' ' + (item.unit||'') + ')\n\nยืนยันจะเบิกล็อต ' + (el.dataset.lot||'') + ' แทนใช่ไหมคะ?');
+    if(!okSkip){
+      var firstEl = container.querySelector('.lot-option');
+      if(firstEl && firstEl !== el){ selectLot(firstEl, item, 0); }
+      return;
+    }
+  }
   // อัปเดต UI
   container.querySelectorAll('.lot-option').forEach(function(o){ o.classList.remove('selected'); });
   el.classList.add('selected');
@@ -3768,7 +3797,7 @@ function parseHistDate(s){
         return {
           date: isNaN(d) ? rawStr : thaiDate(d),
           rawDate: isNaN(d) ? null : d,
-          type: row['ประเภท'] === 'รับเข้า' ? 'recv' : 'wd',
+          type: row['ประเภท'] === 'รับเข้า' ? 'recv' : row['ประเภท'] === 'ปรับยอด' ? 'adj' : 'wd',
           name: row['ชื่อพัสดุ'] || '',
           code: code,
           qty: parseFloat(row['จำนวน']) || 0,
@@ -3828,11 +3857,14 @@ function renderHist(){
 
   tbody.innerHTML = filtered.map(tx => {
     const isRecv   = tx.type === 'recv';
+    const isAdj    = tx.type === 'adj';
     const typeBadge= isRecv
       ? '<span class="tin">📥 รับเข้า</span>'
+      : isAdj
+      ? '<span class="tin" style="background:var(--bl);color:var(--nv)">📋 ปรับยอด</span>'
       : '<span class="tout">📤 เบิกออก</span>';
-    const qtyColor = isRecv ? 'var(--ok-t)' : 'var(--rd-t)';
-    const qtySign  = isRecv ? '+' : '-';
+    const qtyColor = isRecv ? 'var(--ok-t)' : isAdj ? 'var(--nv)' : 'var(--rd-t)';
+    const qtySign  = isRecv ? '+' : isAdj ? (tx.qty >= 0 ? '+' : '') : '-';
     const stockColor = tx.newStock <= 0 ? 'var(--rd-t)' : tx.newStock <= 10 ? 'var(--wn-t)' : 'var(--ok-t)';
     return `<tr>
       <td style="font-size:11px">${tx.date}</td>
@@ -5577,6 +5609,89 @@ function printReqSummary(){
     + '</body></html>');
   w.document.close();
   setTimeout(function(){ w.focus(); w.print(); }, 500);
+}
+
+// ── หน้านับสต็อก / ปรับยอด — เทียบยอดจริงกับระบบ แล้วปรับให้ตรง ──
+function renderCountPage(){
+  var sel = document.getElementById('count-cat');
+  if(sel && !sel.options.length){
+    var cats = {};
+    ITEMS.forEach(function(i){ cats[i.cat] = 1; });
+    REQ_CAT_ORDER.filter(function(c){ return cats[c]; }).forEach(function(c){
+      var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
+    });
+  }
+  renderCountTable();
+}
+
+function renderCountTable(){
+  var cat = (document.getElementById('count-cat')||{}).value || '';
+  var tb  = document.getElementById('count-tbody');
+  if(!tb) return;
+  var rows = ITEMS.filter(function(i){ return i.cat === cat; });
+  rows.sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); });
+  tb.innerHTML = rows.map(function(i){
+    return '<tr><td><span class="cb">'+i.code+'</span></td><td>'+i.name+'</td><td>'+(i.unit||'')+'</td>'
+      + '<td style="text-align:center;font-weight:700">'+(i.cur||0)+'</td>'
+      + '<td style="text-align:center"><input type="number" min="0" class="cnt-inp" data-code="'+i.code+'" placeholder="'+(i.cur||0)+'" style="width:84px;padding:6px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></td>'
+      + '<td class="cnt-diff" style="text-align:center;color:var(--g4)">—</td></tr>';
+  }).join('');
+  tb.querySelectorAll('.cnt-inp').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var item = ITEMS.find(function(i){ return String(i.code) === inp.dataset.code; });
+      var cell = inp.closest('tr').querySelector('.cnt-diff');
+      if(!item || !cell) return;
+      if(inp.value === ''){ cell.textContent = '—'; cell.style.color = 'var(--g4)'; cell.style.fontWeight = '400'; return; }
+      var d = (parseFloat(inp.value)||0) - (parseFloat(item.cur)||0);
+      cell.textContent = (d > 0 ? '+' : '') + d;
+      cell.style.fontWeight = '700';
+      cell.style.color = d === 0 ? 'var(--ok-t)' : (d > 0 ? 'var(--nv)' : 'var(--rd-t)');
+    });
+  });
+}
+
+function saveStockCount(){
+  var changes = [];
+  document.querySelectorAll('#count-tbody .cnt-inp').forEach(function(inp){
+    if(inp.value === '') return;
+    var item = ITEMS.find(function(i){ return String(i.code) === inp.dataset.code; });
+    if(!item) return;
+    var counted = Math.max(0, parseFloat(inp.value)||0);
+    if(counted !== (parseFloat(item.cur)||0)) changes.push({ item: item, counted: counted });
+  });
+  if(!changes.length){ alert('ไม่มีรายการที่ยอดต่างจากระบบค่ะ'); return; }
+  var lines = changes.map(function(c){ return '• ' + c.item.name + ': ' + c.item.cur + ' → ' + c.counted; });
+  if(!confirm('ยืนยันปรับยอด ' + changes.length + ' รายการตามการตรวจนับ:\n\n' + lines.slice(0,12).join('\n')
+    + (lines.length > 12 ? '\n... (อีก ' + (lines.length-12) + ' รายการ)' : '') + '\n\nจะบันทึกลงประวัติเป็น "ปรับยอด" ค่ะ')) return;
+
+  var now = new Date();
+  var user = document.getElementById('sbn').textContent || 'พยาบาล';
+  var syncPromises = [];
+  changes.forEach(function(c){
+    var item = c.item;
+    var oldStock = parseFloat(item.cur)||0, diff = c.counted - oldStock;
+    item.cur = c.counted;
+    TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'adj', name: item.name, code: item.code, lot: '—', qty: diff, unit: item.unit, oldStock: oldStock, newStock: c.counted, user: user });
+    syncPromises.push(fetch(GS_HISTORY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ date: thaiDate(now), type: 'ปรับยอด', code: item.code, name: item.name, qty: diff, remaining: c.counted, lot: '—', user: user, note: 'ตรวจนับสต็อก' })
+    }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+    if(item.code && item.code !== '—'){
+      syncPromises.push(fetch(GS_ITEMS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'updateStock', code: item.code, cur: c.counted })
+      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+    }
+  });
+  Promise.all(syncPromises).then(function(results){
+    var allOk = results.every(function(ok){ return ok; });
+    if(allOk){ alert('✅ ปรับยอด ' + changes.length + ' รายการ และบันทึกลง Google Sheets เรียบร้อยค่ะ'); }
+    else { alert('⚠️ ปรับยอดในหน้าเว็บแล้ว แต่ซิงก์ Google Sheets ไม่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่\n(อย่ากรอกซ้ำก่อนตรวจยอด เพราะอาจปรับซ้ำซ้อน)'); }
+  });
+  renderStockTable();
+  renderCountTable();
 }
 
 // ── รองรับเครื่องสแกนบาร์โค้ด USB/บลูทูธ (keyboard wedge) ──
