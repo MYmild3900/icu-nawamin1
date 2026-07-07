@@ -3150,6 +3150,10 @@ function selectRecvFromAC(el){
 
 // ── QR CODE ──
 function showQRCode(code,name){
+  if(!String(code||'').trim()){
+    alert('⚠️ "'+name+'" ยังไม่มีรหัสพัสดุ จึงสร้าง QR ไม่ได้ค่ะ\nกรุณาเพิ่มรหัสในชีต (คอลัมน์ รหัสพัสดุ) แล้วรีเฟรชเว็บก่อนนะคะ');
+    return;
+  }
   document.getElementById('qrm-title').textContent='QR Code — '+name;
   document.getElementById('qrm-name').textContent=name;
   document.getElementById('qrm-code').textContent='รหัส: '+code;
@@ -4404,9 +4408,9 @@ function filterStock(){
     var rowSts  = (row.getAttribute('data-status')||'').toLowerCase();
     var rowCat  = (row.getAttribute('data-cat')||'').toLowerCase();
 
-    // รองรับสแกนเนอร์ที่พิมพ์เป็นอักษรไทย (แป้นไทย): แปลงกลับเป็นเลขแล้วลองเทียบด้วย
-    var qn = (typeof wedgeNormalize === 'function') ? wedgeNormalize(q) : q;
-    var qOk  = !q   || rowText.includes(q) || (qn !== q && /^[0-9]+$/.test(qn) && rowText.includes(qn));
+    // รองรับสแกนเนอร์ที่พิมพ์เป็นอักษรไทย (แป้นไทย): แปลงกลับเป็นรหัสแล้วลองเทียบด้วย
+    var qn = (typeof wedgeNormalize === 'function') ? wedgeNormalize(q).toLowerCase() : q;
+    var qOk  = !q   || rowText.includes(q) || (qn !== q && /^[0-9a-z]+$/.test(qn) && rowText.includes(qn));
     // ตรวจ category: เทียบทั้งค่าแบบเป๊ะ — ห้ามใช้ includes เพราะ "การแพทย์" เป็น substring ของ "วิทยาศาสตร์การแพทย์"
     var cOk  = !cat || rowCat === cat;
     // ตรวจ status: ตรงกันเป๊ะ
@@ -5575,15 +5579,25 @@ function printReqSummary(){
 // ยิงได้จากทุกหน้าโดยไม่ต้องคลิกช่องค้นหา และแก้ปัญหาแป้นพิมพ์ภาษาไทย
 // (เลข 1-0 กลายเป็น ๅ/-ภถุึคตจ) โดยแปลงกลับเป็นตัวเลขอัตโนมัติ
 (function(){
-  var TH2NUM = {'ๅ':'1','/':'2','-':'3','ภ':'4','ถ':'5','ุ':'6','ึ':'7','ค':'8','ต':'9','จ':'0'};
+  // แผนผังแป้นไทยเกษมณี → อักขระอังกฤษ (รองรับรหัสที่มีตัวอักษร เช่น 3A007)
+  var TH2EN = {
+    'ๅ':'1','/':'2','-':'3','ภ':'4','ถ':'5','ุ':'6','ึ':'7','ค':'8','ต':'9','จ':'0','ข':'-','ช':'=',
+    'ๆ':'q','ไ':'w','ำ':'e','พ':'r','ะ':'t','ั':'y','ี':'u','ร':'i','น':'o','ย':'p','บ':'[','ล':']',
+    'ฟ':'a','ห':'s','ก':'d','ด':'f','เ':'g','้':'h','่':'j','า':'k','ส':'l','ว':';','ง':"'",
+    'ผ':'z','ป':'x','แ':'c','อ':'v','ิ':'b','ื':'n','ท':'m','ม':',','ใ':'.','ฝ':'/',
+    '๐':'Q','ฎ':'E','ฑ':'R','ธ':'T','ํ':'Y','๊':'U','ณ':'I','ฯ':'O','ญ':'P',
+    'ฤ':'A','ฆ':'S','ฏ':'D','โ':'F','ฌ':'G','็':'H','๋':'J','ษ':'K','ศ':'L','ซ':':',
+    'ฉ':'C','ฮ':'V','ฺ':'B','์':'N',
+    '๑':'2','๒':'3','๓':'4','๔':'5','ู':'6','฿':'7','๕':'8','๖':'9','๗':'0'
+  };
   window.wedgeNormalize = function(s){
-    return String(s||'').split('').map(function(c){ return TH2NUM[c] || c; }).join('');
+    return String(s||'').split('').map(function(c){ return TH2EN[c] || c; }).join('');
   };
   var buf = '', last = 0, idleTimer = null;
   function flushScan(){
-    if(buf.length >= 6 && typeof ITEMS !== 'undefined'){
-      var code = wedgeNormalize(buf);
-      var item = ITEMS.find(function(i){ return String(i.code) === code; });
+    if(buf.length >= 4 && typeof ITEMS !== 'undefined'){
+      var code = wedgeNormalize(buf).toLowerCase();
+      var item = ITEMS.find(function(i){ return String(i.code).toLowerCase() === code; });
       buf = '';
       if(item){ handleWedgeScan(item); return true; }
     }
@@ -5652,7 +5666,16 @@ function printQRSheet(){
   var sel = document.getElementById('stock-cat-sel');
   var cat = sel ? sel.value : '';
   var items = ITEMS.filter(function(i){ return !cat || i.cat === cat; });
-  if(items.length === 0){ alert('ไม่มีพัสดุในหมวดที่เลือกค่ะ'); return; }
+  // ข้ามรายการที่ยังไม่มีรหัสพัสดุ — QR จะว่างเปล่า สแกนไม่ได้
+  var noCode = items.filter(function(i){ return !String(i.code || '').trim(); });
+  items = items.filter(function(i){ return String(i.code || '').trim(); });
+  if(noCode.length){
+    alert('⚠️ ข้าม ' + noCode.length + ' รายการที่ยังไม่มีรหัสพัสดุ (สร้าง QR ไม่ได้):\n- '
+      + noCode.map(function(n){ return n.name; }).slice(0, 15).join('\n- ')
+      + (noCode.length > 15 ? '\n...' : '')
+      + '\n\nกรุณาเพิ่มรหัสในชีตหมวดนั้น (คอลัมน์ รหัสพัสดุ) แล้วรีเฟรชเว็บก่อนพิมพ์ค่ะ');
+  }
+  if(items.length === 0){ alert('ไม่มีพัสดุ(ที่มีรหัส)ในหมวดที่เลือกค่ะ'); return; }
 
   // จัดกลุ่มตามหมวด (ลำดับเดียวกับสรุปเบิก — หมวดที่ไม่อยู่ในลำดับต่อท้าย)
   var groups = [], used = {};
