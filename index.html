@@ -4404,7 +4404,9 @@ function filterStock(){
     var rowSts  = (row.getAttribute('data-status')||'').toLowerCase();
     var rowCat  = (row.getAttribute('data-cat')||'').toLowerCase();
 
-    var qOk  = !q   || rowText.includes(q);
+    // รองรับสแกนเนอร์ที่พิมพ์เป็นอักษรไทย (แป้นไทย): แปลงกลับเป็นเลขแล้วลองเทียบด้วย
+    var qn = (typeof wedgeNormalize === 'function') ? wedgeNormalize(q) : q;
+    var qOk  = !q   || rowText.includes(q) || (qn !== q && /^[0-9]+$/.test(qn) && rowText.includes(qn));
     // ตรวจ category: เทียบทั้งค่าแบบเป๊ะ — ห้ามใช้ includes เพราะ "การแพทย์" เป็น substring ของ "วิทยาศาสตร์การแพทย์"
     var cOk  = !cat || rowCat === cat;
     // ตรวจ status: ตรงกันเป๊ะ
@@ -5574,21 +5576,34 @@ function printReqSummary(){
 // (เลข 1-0 กลายเป็น ๅ/-ภถุึคตจ) โดยแปลงกลับเป็นตัวเลขอัตโนมัติ
 (function(){
   var TH2NUM = {'ๅ':'1','/':'2','-':'3','ภ':'4','ถ':'5','ุ':'6','ึ':'7','ค':'8','ต':'9','จ':'0'};
-  var buf = '', last = 0;
+  window.wedgeNormalize = function(s){
+    return String(s||'').split('').map(function(c){ return TH2NUM[c] || c; }).join('');
+  };
+  var buf = '', last = 0, idleTimer = null;
+  function flushScan(){
+    if(buf.length >= 6 && typeof ITEMS !== 'undefined'){
+      var code = wedgeNormalize(buf);
+      var item = ITEMS.find(function(i){ return String(i.code) === code; });
+      buf = '';
+      if(item){ handleWedgeScan(item); return true; }
+    }
+    buf = '';
+    return false;
+  }
   document.addEventListener('keydown', function(e){
     var now = Date.now();
-    if(now - last > 120) buf = '';   // เครื่องสแกนพิมพ์รัวมาก — คนพิมพ์เองช้ากว่านี้
+    if(now - last > 250) buf = '';   // เครื่องสแกนพิมพ์รัว — คนพิมพ์เองช้ากว่านี้
     last = now;
+    if(idleTimer){ clearTimeout(idleTimer); idleTimer = null; }
     if(e.key === 'Enter'){
-      if(buf.length >= 6 && typeof ITEMS !== 'undefined'){
-        var code = buf.split('').map(function(c){ return TH2NUM[c] || c; }).join('');
-        var item = ITEMS.find(function(i){ return String(i.code) === code; });
-        if(item){ e.preventDefault(); handleWedgeScan(item); }
-      }
-      buf = '';
+      if(flushScan()) e.preventDefault();
       return;
     }
-    if(e.key && e.key.length === 1) buf += e.key;
+    if(e.key && e.key.length === 1){
+      buf += e.key;
+      // เครื่องสแกนบางรุ่นไม่ส่ง Enter ปิดท้าย — รอเงียบ 300ms แล้วตรวจเอง
+      idleTimer = setTimeout(flushScan, 300);
+    }
   }, true);
   window.handleWedgeScan = function(item){
     var ni = document.querySelector(".ni[onclick*=\"go('stock'\"]");
