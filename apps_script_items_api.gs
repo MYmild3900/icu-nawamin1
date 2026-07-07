@@ -237,13 +237,24 @@ function getLotSheet_() {
   return sheet;
 }
 
-function findLotRow_(sheet, code, lot) {
+function findLotRow_(sheet, code, lot, name) {
   var last = sheet.getLastRow();
   if (last < 2) return -1;
   var vals = sheet.getRange(2, 1, last - 1, 3).getValues();
   var c = String(code).trim(), l = String(lot || '—').trim();
   for (var i = 0; i < vals.length; i++) {
     if (String(vals[i][0]).trim() === c && String(vals[i][2]).trim() === l) return i + 2;
+  }
+  // แถวที่กรอกมือโดยไม่มีรหัส: จับคู่ด้วยชื่อ+ล็อตแทน แล้วเติมรหัสกลับลงแถวให้เลย (ซ่อมตัวเอง)
+  if (name) {
+    var norm = function (s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); };
+    var n = norm(name);
+    for (var j = 0; j < vals.length; j++) {
+      if (!String(vals[j][0]).trim() && norm(vals[j][1]) === n && String(vals[j][2]).trim() === l) {
+        sheet.getRange(j + 2, 1).setValue(c);
+        return j + 2;
+      }
+    }
   }
   return -1;
 }
@@ -267,7 +278,7 @@ function upsertLot(data) {
   if (!data.code) return { error: 'ไม่มีรหัสพัสดุ' };
   var sheet = getLotSheet_();
   var lot = String(data.lot || '—').trim() || '—';
-  var row = findLotRow_(sheet, data.code, lot);
+  var row = findLotRow_(sheet, data.code, lot, data.name);
   if (row === -1) {
     sheet.appendRow([String(data.code), data.name || '', lot, Number(data.qty) || 0, data.recv || '', data.exp || '']);
     return { ok: true, created: true };
@@ -286,7 +297,7 @@ function deductLot(data) {
   var sheet = ss.getSheetByName('Lot');
   if (!sheet) return { ok: true, skipped: true };
   var lot = String(data.lot || '—').trim() || '—';
-  var row = findLotRow_(sheet, data.code, lot);
+  var row = findLotRow_(sheet, data.code, lot, data.name);
   if (row === -1) return { ok: true, skipped: true };
   var cur = Number(sheet.getRange(row, 4).getValue()) || 0;
   var next = Math.max(0, cur - (Number(data.qty) || 0));

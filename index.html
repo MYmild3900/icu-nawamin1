@@ -3520,7 +3520,7 @@ function saveWd(){
       syncPromises.push(fetch(GS_ITEMS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'deductLot', code: item.code, lot: lot, qty: qty })
+        body: JSON.stringify({ action: 'deductLot', code: item.code, name: item.name, lot: lot, qty: qty })
       }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
       var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
       if (exL) {
@@ -5402,11 +5402,15 @@ function loadFromSheets() {
     });
     // ผูกทะเบียน lot เข้ากับพัสดุ เรียงวันหมดอายุใกล้สุดก่อน (FEFO)
     if (lotRows && lotRows.length) {
-      var lotsByCode = {};
+      var lotsByCode = {}, lotsByName = {};
+      var normLotName = function(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); };
       lotRows.forEach(function(lr){
         var q = parseFloat(lr.qty)||0;
-        if (!lr.code || q <= 0) return;
-        (lotsByCode[lr.code] = lotsByCode[lr.code] || []).push({ lot: lr.lot||'—', recv: lr.recv||'—', exp: lr.exp||'—', qty: q });
+        if (q <= 0) return;
+        var rec = { lot: lr.lot||'—', recv: lr.recv||'—', exp: lr.exp||'—', qty: q };
+        if (lr.code) (lotsByCode[lr.code] = lotsByCode[lr.code] || []).push(rec);
+        // แถวที่กรอกมือโดยไม่มีรหัส — จับคู่ด้วยชื่อแทน
+        else if (lr.name) (lotsByName[normLotName(lr.name)] = lotsByName[normLotName(lr.name)] || []).push(rec);
       });
       // เรียงวันหมดอายุ — รองรับทั้งปี ค.ศ. และ พ.ศ. (ปี > 2400 ถือเป็น พ.ศ. ลบ 543)
       var expTime = function(e){
@@ -5416,8 +5420,8 @@ function loadFromSheets() {
         return (y > 2400 ? new Date(y - 543, d.getMonth(), d.getDate()) : d).getTime();
       };
       allItems.forEach(function(item){
-        var ls = lotsByCode[item.code];
-        if (!ls || !ls.length) return;
+        var ls = (lotsByCode[item.code] || []).concat(lotsByName[normLotName(item.name)] || []);
+        if (!ls.length) return;
         ls.sort(function(a,b){ return expTime(a.exp) - expTime(b.exp); });
         item.lots = ls;
         item.lot = ls[0].lot; item.exp = ls[0].exp; item.recv = ls[0].recv;
