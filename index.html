@@ -5018,7 +5018,11 @@ function updateDashLists(){
   var urgentEl = document.getElementById('dash-urgent-list');
   if(urgentEl){
     var urgent = ITEMS.filter(function(i){return i.status==='rd'||i.status==='pk'||i.cur<=i.min;});
+    // เรียงตามลำดับความสำคัญของหมวดก่อน แล้วค่อยเรียงตามความรุนแรงในหมวดเดียวกัน
+    var catPrio={'💉 9.Needle+Syringe':0,'🩺 4.การแพทย์':1,'🔬 7.วิทยาศาสตร์การแพทย์':2,'📋 1.สำนักงาน':3,'🧹 2.งานบ้าน':4,'🖨️ 3.สิ่งพิมพ์':5};
     urgent.sort(function(a,b){
+      var ca=(catPrio[a.cat]!==undefined)?catPrio[a.cat]:9, cb=(catPrio[b.cat]!==undefined)?catPrio[b.cat]:9;
+      if(ca!==cb) return ca-cb;
       var order={rd:0,pk:1,wn:2,ok:3};
       return (order[a.status]||3)-(order[b.status]||3);
     });
