@@ -4084,6 +4084,19 @@ function fillItemToForm(item, mode){
   const row = qrTargetBtn ? qrTargetBtn.closest('.rrow') || qrTargetBtn.closest('.wd-item-row') : null;
   if(!row) return;
 
+  // ใช้ flow เดียวกับการเลือกจากรายการค้นหา — หน้าเบิกออกจะได้เปิดตัวเลือก Lot ให้เลือกเองด้วย
+  var acList = row.querySelector('.ac-list');
+  if(acList){
+    var dummy = document.createElement('div');
+    acList.appendChild(dummy);
+    try{
+      if(mode === 'recv') selectRecvItem(dummy, item.name, item.code, item.cur, item.unit);
+      else selectWdItem(dummy, item.code);
+      return;
+    }catch(e){ /* ตกไปใช้วิธีเดิมด้านล่าง */ }
+    finally{ if(dummy.parentNode) dummy.parentNode.removeChild(dummy); acList.style.display = 'none'; }
+  }
+
   if(mode === 'recv'){
     const inp = row.querySelector('.recv-search');
     if(inp){
