@@ -3533,24 +3533,12 @@ function saveWd(){
       oldStock, newStock,
       user
     });
-    syncPromises.push(fetch(GS_HISTORY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ date: thaiDate(now), type: 'เบิกออก', code, name, qty, remaining: newStock, lot, user, note: '' })
-    }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+    syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: thaiDate(now), type: 'เบิกออก', code, name, qty, remaining: newStock, lot, user, note: '' }, 'ประวัติเบิก: '+name));
     // อัปเดตยอดคงเหลือในแถวเดิมของชีตหมวด (ไม่แทรกแถว)
     if (item && item.code && item.code !== '—') {
-      syncPromises.push(fetch(GS_ITEMS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateStock', code: item.code, cur: newStock })
-      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'updateStock', code: item.code, cur: newStock }, 'ยอดคงเหลือ: '+item.name));
       // ตัดยอด lot ที่เลือกในทะเบียน lot (tab Lot)
-      syncPromises.push(fetch(GS_ITEMS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'deductLot', code: item.code, name: item.name, lot: lot, qty: qty })
-      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'deductLot', code: item.code, name: item.name, lot: lot, qty: qty }, 'ตัดล็อต: '+item.name));
       var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
       if (exL) {
         exL.qty = Math.max(0, (parseFloat(exL.qty)||0) - qty);
@@ -3579,7 +3567,7 @@ function saveWd(){
     if (failed === 0) {
       alert('✅ บันทึกเบิกพัสดุ ' + saved + ' รายการเรียบร้อยแล้วค่ะ!\n💊 ประวัติอัปเดตแล้วค่ะ 😊');
     } else {
-      alert('⚠️ บันทึกในแอปแล้ว ' + saved + ' รายการ แต่ส่งขึ้น Google Sheets ไม่สำเร็จ ' + failed + ' รายการค่ะ\nอย่ากดบันทึกซ้ำนะคะ (ยอดจะถูกหักซ้ำ) — กรุณาตรวจอินเทอร์เน็ตหรือแจ้งผู้ดูแลระบบ ประวัติใน Sheets อาจไม่ครบค่ะ');
+      alert('✅ บันทึกเบิกพัสดุ ' + saved + ' รายการในแอปแล้วค่ะ\n📡 มีบางส่วนส่งขึ้น Google Sheets ไม่สำเร็จ (เน็ตไม่เสถียร) — ระบบเก็บไว้ในคิวและจะส่งให้อัตโนมัติเมื่อเน็ตกลับมา ข้อมูลไม่หายค่ะ\n\n❗ ไม่ต้องกดบันทึกซ้ำนะคะ (ยอดจะถูกหักซ้ำ) — ดูสถานะได้ที่ป้ายมุมขวาล่าง');
     }
 
     // ล้างฟอร์มทั้งหมด — เหลือแถวเปล่าแถวเดียว และเอาข้อมูลรายการที่ทำไปแล้วออกให้หมด
@@ -3638,24 +3626,12 @@ function saveWd(){
     const newStock = oldStock + qty;
     if (item) item.cur = newStock;
     TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'recv', name, code, lot, qty, unit, oldStock, newStock, user });
-    syncPromises.push(fetch(GS_HISTORY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ date: recvDateTh, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' })
-    }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+    syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: recvDateTh, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' }, 'ประวัติรับเข้า: '+name));
     // อัปเดตยอดคงเหลือในแถวเดิมของชีตหมวด (ไม่แทรกแถว)
     if (item && item.code && item.code !== '—') {
-      syncPromises.push(fetch(GS_ITEMS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateStock', code: item.code, cur: newStock })
-      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'updateStock', code: item.code, cur: newStock }, 'ยอดคงเหลือ: '+item.name));
       // เพิ่ม/บวกยอด lot ในทะเบียน lot (tab Lot — แถวใหม่เกิดเฉพาะใน tab นี้)
-      syncPromises.push(fetch(GS_ITEMS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'upsertLot', code: item.code, name: name, lot: lot, qty: qty, recv: recvDateTh, exp: exp || '' })
-      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'upsertLot', code: item.code, name: name, lot: lot, qty: qty, recv: recvDateTh, exp: exp || '' }, 'เพิ่มล็อต: '+name));
       var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
       if (exL) { exL.qty = (parseFloat(exL.qty)||0) + qty; if (exp) exL.exp = exp; }
       else { item.lots = item.lots || []; item.lots.push({ lot: lot||'—', recv: recvDateTh, exp: exp||'—', qty: qty }); }
@@ -3682,7 +3658,7 @@ function saveWd(){
     if (failed === 0) {
       alert('✅ บันทึกรับพัสดุ ' + saved + ' รายการเรียบร้อยแล้วค่ะ!\n📦 ประวัติอัปเดตแล้วค่ะ 😊');
     } else {
-      alert('⚠️ บันทึกในแอปแล้ว ' + saved + ' รายการ แต่ส่งขึ้น Google Sheets ไม่สำเร็จ ' + failed + ' รายการค่ะ\nอย่ากดบันทึกซ้ำนะคะ (ยอดจะถูกบวกซ้ำ) — กรุณาตรวจอินเทอร์เน็ตหรือแจ้งผู้ดูแลระบบ ประวัติใน Sheets อาจไม่ครบค่ะ');
+      alert('✅ บันทึกรับพัสดุ ' + saved + ' รายการในแอปแล้วค่ะ\n📡 มีบางส่วนส่งขึ้น Google Sheets ไม่สำเร็จ (เน็ตไม่เสถียร) — ระบบเก็บไว้ในคิวและจะส่งให้อัตโนมัติเมื่อเน็ตกลับมา ข้อมูลไม่หายค่ะ\n\n❗ ไม่ต้องกดบันทึกซ้ำนะคะ (ยอดจะถูกบวกซ้ำ) — ดูสถานะได้ที่ป้ายมุมขวาล่าง');
     }
     document.querySelectorAll('#pg-recv .rrow').forEach((r, i) => {
       if (i > 0) { r.remove(); return; }   // แถวเสริมที่กดเพิ่มไว้ ให้ลบทิ้ง
@@ -5284,6 +5260,85 @@ function fetchCSVRetry(url, tries){
   });
 }
 
+// ══════════════════════════════════════════════════════
+// OUTBOX — คิวส่งข้อมูลออฟไลน์
+// ถ้าซิงก์ Google Sheets ล้มเหลว (เน็ตไม่เสถียร) เก็บคำขอไว้ใน
+// localStorage แล้วส่งซ้ำอัตโนมัติเมื่อเน็ตกลับมา — กันข้อมูลเบิก/รับ/
+// ปรับยอด หายตอนรีเฟรช (เพราะแอปจะดึงจาก Sheets มาทับของในเครื่อง)
+// ══════════════════════════════════════════════════════
+var OUTBOX_KEY = 'icu_outbox_v1';
+function outboxLoad(){ try{ return JSON.parse(localStorage.getItem(OUTBOX_KEY)) || []; }catch(e){ return []; } }
+function outboxSave(arr){ try{ localStorage.setItem(OUTBOX_KEY, JSON.stringify(arr)); }catch(e){} }
+function outboxCount(){ return outboxLoad().length; }
+
+// ส่ง 1 คำขอ — สำเร็จคืน true; ล้มเหลวเก็บเข้าคิวแล้วคืน false (ไม่ทิ้งข้อมูล)
+function syncOrQueue(url, bodyObj, label){
+  return fetch(url, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(bodyObj) })
+    .then(function(r){ if(r.ok) return true; throw new Error('HTTP '+r.status); })
+    .catch(function(){
+      var q = outboxLoad();
+      q.push({ id: Date.now()+'-'+Math.random().toString(36).slice(2,7), url:url, body:bodyObj, label:label||'', ts:new Date().toISOString() });
+      outboxSave(q);
+      updateOutboxBadge();
+      return false;
+    });
+}
+
+var _outboxFlushing = false;
+function flushOutbox(){
+  if(_outboxFlushing) return Promise.resolve(outboxCount());
+  var q = outboxLoad();
+  if(!q.length){ updateOutboxBadge(); return Promise.resolve(0); }
+  _outboxFlushing = true; updateOutboxBadge();
+  var remaining = q.slice();
+  function step(){
+    if(!remaining.length) return Promise.resolve();
+    var it = remaining[0];
+    return fetch(it.url, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(it.body) })
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        // ส่งสำเร็จ — ลบออกจากคิวจริงด้วย id (กันชนกับรายการที่เพิ่งถูกเพิ่มระหว่างส่ง)
+        outboxSave(outboxLoad().filter(function(x){ return x.id !== it.id; }));
+        updateOutboxBadge();
+        remaining.shift();
+        return step();
+      });
+  }
+  var startCount = q.length;
+  return step()
+    .then(function(){
+      _outboxFlushing=false; updateOutboxBadge();
+      // ส่งคิวครบแล้ว และเพิ่งมีการส่งจริง → ดึงข้อมูลจาก Sheets ใหม่ให้ยอดตรงกัน
+      // (กันกรณีรีเฟรชตอนมีคิวค้าง แล้วดึงยอดเก่ามาแสดง)
+      if(outboxCount()===0 && startCount>0 && typeof loadFromSheets==='function') loadFromSheets();
+      return outboxCount();
+    })
+    .catch(function(){ _outboxFlushing=false; updateOutboxBadge(); return outboxCount(); }); // ยังส่งไม่ครบ — รอบหน้าลองต่อ
+}
+
+function updateOutboxBadge(){
+  var n = outboxCount();
+  var el = document.getElementById('outbox-badge');
+  if(!el){
+    if(n===0) return;
+    el = document.createElement('div');
+    el.id = 'outbox-badge';
+    el.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:9999;background:#8e1b0f;color:#fff;border-radius:10px;padding:10px 14px;font-size:12.5px;font-family:inherit;box-shadow:0 3px 14px rgba(0,0,0,.35);max-width:290px;line-height:1.45';
+    document.body.appendChild(el);
+  }
+  if(n===0){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML = '⏳ มีข้อมูล <b>'+n+'</b> รายการรอส่งขึ้น Google Sheets<br>'
+    + '<span style="font-size:11px;opacity:.92">ระบบจะส่งให้อัตโนมัติเมื่อเน็ตกลับมา — ข้อมูลไม่หาย แม้ปิดแล้วเปิดใหม่</span><br>'
+    + '<button onclick="flushOutbox()" style="margin-top:6px;background:#fff;color:#8e1b0f;border:none;border-radius:6px;padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit">🔄 ลองส่งเดี๋ยวนี้</button>';
+}
+
+// ส่งคิวซ้ำ: เมื่อเน็ตกลับมา / ทุก 25 วิถ้ายังค้าง / ตอนเปิดหน้า
+window.addEventListener('online', function(){ flushOutbox(); });
+setInterval(function(){ if(outboxCount() > 0 && navigator.onLine !== false) flushOutbox(); }, 25000);
+window.addEventListener('beforeunload', function(e){ if(outboxCount() > 0){ e.preventDefault(); e.returnValue=''; return ''; } });
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ updateOutboxBadge(); flushOutbox(); }, 1500); });
+
 // ── ฟังก์ชันช่วย: แปลง CSV text → array of objects ──
 function parseCSVToObjects(text) {
   if (!text || !text.trim()) return [];
@@ -5692,23 +5747,15 @@ function saveStockCount(){
     var oldStock = parseFloat(item.cur)||0, diff = c.counted - oldStock;
     item.cur = c.counted;
     TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'adj', name: item.name, code: item.code, lot: '—', qty: diff, unit: item.unit, oldStock: oldStock, newStock: c.counted, user: user });
-    syncPromises.push(fetch(GS_HISTORY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ date: thaiDate(now), type: 'ปรับยอด', code: item.code, name: item.name, qty: diff, remaining: c.counted, lot: '—', user: user, note: 'ตรวจนับสต็อก' })
-    }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+    syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: thaiDate(now), type: 'ปรับยอด', code: item.code, name: item.name, qty: diff, remaining: c.counted, lot: '—', user: user, note: 'ตรวจนับสต็อก' }, 'ประวัติปรับยอด: '+item.name));
     if(item.code && item.code !== '—'){
-      syncPromises.push(fetch(GS_ITEMS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'updateStock', code: item.code, cur: c.counted })
-      }).then(function(r){ return r.ok; }).catch(function(){ return false; }));
+      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'updateStock', code: item.code, cur: c.counted }, 'ยอดคงเหลือ: '+item.name));
     }
   });
   Promise.all(syncPromises).then(function(results){
     var allOk = results.every(function(ok){ return ok; });
     if(allOk){ alert('✅ ปรับยอด ' + changes.length + ' รายการ และบันทึกลง Google Sheets เรียบร้อยค่ะ'); }
-    else { alert('⚠️ ปรับยอดในหน้าเว็บแล้ว แต่ซิงก์ Google Sheets ไม่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่\n(อย่ากรอกซ้ำก่อนตรวจยอด เพราะอาจปรับซ้ำซ้อน)'); }
+    else { alert('✅ ปรับยอด ' + changes.length + ' รายการในแอปแล้วค่ะ\n📡 มีบางส่วนส่งขึ้น Google Sheets ไม่สำเร็จ (เน็ตไม่เสถียร) — ระบบเก็บไว้ในคิวและจะส่งให้อัตโนมัติเมื่อเน็ตกลับมา ข้อมูลไม่หายค่ะ\n\n❗ ไม่ต้องกรอกซ้ำนะคะ — ดูสถานะได้ที่ป้ายมุมขวาล่าง'); }
   });
   renderStockTable();
   renderCountTable();
