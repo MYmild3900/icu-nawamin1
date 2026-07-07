@@ -5605,7 +5605,38 @@ function printReqSummary(){
       idleTimer = setTimeout(flushScan, 300);
     }
   }, true);
+  // เติมพัสดุลงแถวในฟอร์ม โดยยืม selectRecvItem/selectWdItem (ต้องส่ง element ที่อยู่ใน .ac-list)
+  function fillRowVia(row, selFn){
+    var list = row.querySelector('.ac-list');
+    if(!list) return false;
+    var d = document.createElement('div');
+    list.appendChild(d);
+    try{ selFn(d); }catch(err){ return false; }
+    finally{ if(d.parentNode) d.parentNode.removeChild(d); list.style.display = 'none'; }
+    return true;
+  }
+  function firstEmptyRow(pg, rowSel, inpSel){
+    var rows = pg.querySelectorAll(rowSel);
+    for(var i = 0; i < rows.length; i++){
+      var inp = rows[i].querySelector(inpSel);
+      if(inp && !inp.value.trim()) return rows[i];
+    }
+    return rows.length ? rows[rows.length - 1] : null;
+  }
   window.handleWedgeScan = function(item){
+    // อยู่หน้าเบิกออก → เติมแถวว่าง + เปิดตัวเลือก Lot (FEFO)
+    var pgWd = document.getElementById('pg-wd');
+    if(pgWd && pgWd.classList.contains('on')){
+      var wrow = firstEmptyRow(pgWd, '.wd-item-row', '.wd-name-inp');
+      if(wrow && fillRowVia(wrow, function(d){ selectWdItem(d, item.code); })) return;
+    }
+    // อยู่หน้ารับเข้า → เติมแถวว่าง
+    var pgRecv = document.getElementById('pg-recv');
+    if(pgRecv && pgRecv.classList.contains('on')){
+      var rrow = firstEmptyRow(pgRecv, '.rrow', '.recv-search');
+      if(rrow && fillRowVia(rrow, function(d){ selectRecvItem(d, item.name, item.code, item.cur, item.unit); })) return;
+    }
+    // หน้าอื่น → ไปหน้าคลังพัสดุแล้วแสดงรายการนั้น
     var ni = document.querySelector(".ni[onclick*=\"go('stock'\"]");
     go('stock', ni);
     var sb = document.getElementById('stock-search');
