@@ -2131,7 +2131,7 @@ tr:hover td{background:var(--wh)}
           <div class="poka-warn"><span style="font-size:14px;flex-shrink:0">⚠️</span><div><b>เลือก Lot ไม่ตรง FIFO</b><br><span class="poka-warn-msg"></span></div></div>
         </div>
       </div>
-      <button class="btn sm" style="margin-top:6px" onclick="addWdRow()">+ เพิ่มรายการ</button>
+      <button id="wd-add-btn" class="btn sm" style="margin-top:6px" onclick="addWdRow()">+ เพิ่มรายการ</button>
       <div class="ht">📦 FIFO (First In First Out) — รับเข้าก่อน ใช้ก่อนเสมอ</div>
       <div class="fa"><button class="btn" onclick="clearWd()">🔄 ล้าง</button><button class="btn wn" onclick="saveWd()">💾 บันทึกเบิก</button></div>
     </div>
@@ -4894,7 +4894,10 @@ function addWdRow(){
       <div class="poka-warn"><span style="font-size:14px;flex-shrink:0">⚠️</span><div><b>เลือก Lot ไม่ตรง FIFO</b><br><span class="poka-warn-msg"></span></div></div>
     </div>`;
 
-  hint.parentNode.insertBefore(newRow, hint);
+  // แทรกแถวใหม่ก่อนปุ่ม "+ เพิ่มรายการ" เพื่อให้ปุ่มอยู่ล่างสุดของทุกแถวเสมอ
+  var addBtn = document.getElementById('wd-add-btn');
+  if(addBtn){ addBtn.parentNode.insertBefore(newRow, addBtn); }
+  else { hint.parentNode.insertBefore(newRow, hint); }
 }
 
 // ── อัปเดต dashboard summary วันนี้ ──
