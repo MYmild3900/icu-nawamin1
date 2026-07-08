@@ -9,8 +9,11 @@
 <meta name="application-name" content="ระบบพัสดุ ICU 1">
 <meta name="theme-color" content="#1b2a4a">
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<script src="./qrcode.min.js"></script>
+<script src="./jsQR.min.js"></script>
 <style>
 :root{
   --nv:#032A42;--nv2:#083c5a;--bl:#D1E2F3;--bg:#F0F0DC;--wh:#F0D8B6;--li:#B3926F;--li2:#8a6d52;
@@ -5342,6 +5345,13 @@ setInterval(function(){ if(outboxCount() > 0 && navigator.onLine !== false) flus
 window.addEventListener('beforeunload', function(e){ if(outboxCount() > 0){ e.preventDefault(); e.returnValue=''; return ''; } });
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ updateOutboxBadge(); flushOutbox(); }, 1500); });
 
+// ── ลงทะเบียน Service Worker (PWA) — ทำให้เปิดแอปได้แม้ไม่มีเน็ต ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(err){ console.warn('SW register failed:', err); });
+  });
+}
+
 // ── ฟังก์ชันช่วย: แปลง CSV text → array of objects ──
 function parseCSVToObjects(text) {
   if (!text || !text.trim()) return [];
@@ -5538,7 +5548,27 @@ function loadFromSheets() {
       });
     }
     if (failedSheets.length > 0 || allItems.length === 0) {
-      // โหลดไม่ครบ — คงข้อมูลเดิมไว้ทั้งหมด ห้ามเขียนทับด้วยข้อมูลบางส่วน (ยอด/รูปจะเพี้ยน)
+      // โหลดไม่ครบ (มักเพราะออฟไลน์) — ลองใช้ snapshot ล่าสุดที่ cache ไว้ในเครื่องก่อน
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem('icu_items_cache')); } catch(e){}
+      if (cached && cached.length) {
+        ITEMS.length = 0;
+        cached.forEach(function(item){ ITEMS.push(item); });
+        ITEMS.forEach(function(item){var s=item.code?localStorage.getItem('img_'+item.code):null;if(s)item.imgData=s;});
+        renderStockTable(); syncStockTable();
+        if (typeof syncACLists==='function') syncACLists();
+        updateDashStats(); updateDashLists();
+        if (typeof updateDashSummary==='function') updateDashSummary();
+        filterStock();
+        if (banner) {
+          banner.style.background='#b06a00';
+          banner.textContent='📴 โหมดออฟไลน์ — แสดงข้อมูลล่าสุดที่บันทึกไว้ ('+cached.length+' รายการ) · การเบิก/รับจะซิงก์อัตโนมัติเมื่อเน็ตกลับมา';
+          banner.style.display='block';
+        }
+        console.warn('โหลด Sheets ไม่ได้ — ใช้ snapshot ในเครื่องแทน ('+cached.length+' รายการ)');
+        return;
+      }
+      // ไม่มี cache — คงข้อมูลเดิมไว้ทั้งหมด ห้ามเขียนทับด้วยข้อมูลบางส่วน (ยอด/รูปจะเพี้ยน)
       console.warn('โหลดจาก Sheets ไม่ครบ:', failedSheets.join(', ') || 'ไม่มีข้อมูล');
       if (banner) {
         banner.style.background='#c0392b';
@@ -5551,6 +5581,8 @@ function loadFromSheets() {
     ITEMS.length=0;
    allItems.forEach(function(item){ if(!item.imgUrl&&item.code&&IMG_FB[item.code])item.imgUrl=IMG_FB[item.code]; ITEMS.push(item); });
     ITEMS.forEach(function(item){var s=item.code?localStorage.getItem('img_'+item.code):null;if(s)item.imgData=s;});
+    // เก็บ snapshot ข้อมูลล่าสุดไว้ในเครื่อง (ไม่รวมรูป base64 กันเต็มพื้นที่) — ไว้ใช้เปิดตอนออฟไลน์
+    try { localStorage.setItem('icu_items_cache', JSON.stringify(ITEMS.map(function(it){ var c={}; for(var k in it){ if(k!=='imgData') c[k]=it[k]; } return c; }))); } catch(e){}
     renderStockTable();
     syncStockTable();   // เติม "ทำรายการล่าสุด" กลับ กรณีประวัติโหลดเสร็จก่อนตารางถูกวาดใหม่
     if (typeof syncACLists==='function') syncACLists();
