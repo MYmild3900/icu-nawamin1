@@ -5137,9 +5137,11 @@ function renderExpiryAlerts(){
     else if(d<=60){ col='#d17a00'; tag='อีก '+d+' วัน'; }
     else { col='#b8860b'; tag='อีก '+d+' วัน'; }
     var expTxt = (r.lot.exp && r.lot.exp!=='—') ? ' · หมดอายุ '+r.lot.exp : '';
+    var qty = (r.lot.qty!=null && r.lot.qty!=='') ? (parseFloat(r.lot.qty)||0) : null;
+    var qtyTxt = (qty!=null) ? ' · <b style="color:'+col+'">เหลือ '+qty+' '+(r.item.unit||'')+'</b>' : '';
     return '<div class="ai"><span class="ad" style="background:'+col+'"></span>'
       +'<span style="flex:1;font-size:12px">'+r.item.name
-      +'<span style="color:var(--g4);font-size:10px"> · Lot '+(r.lot.lot||'—')+expTxt+'</span></span>'
+      +'<span style="color:var(--g4);font-size:10px"> · Lot '+(r.lot.lot||'—')+expTxt+qtyTxt+'</span></span>'
       +'<span style="font-weight:700;font-size:11px;color:'+col+'">'+tag+'</span></div>';
   }
   var html='';

@@ -392,6 +392,9 @@ function buildDigestData_() {
     var c = Number(i.cur) || 0, m = Number(i.min) || 0;
     return c > 0 && m > 0 && c <= m;
   });
+  // แผนที่หน่วยนับ (ตามชื่อพัสดุ) เพื่อแสดง "เหลือ N หน่วย" ในอีเมล
+  var unitByName = {};
+  items.forEach(function (i) { if (i.name) unitByName[i.name] = i.unit || ''; });
   // วันหมดอายุ: จาก tab Lot (ราย lot ที่ยังมีของ) + จากคอลัมน์ exp ของชีตหมวด (ตัวที่ไม่มีใน Lot)
   var seen = {};
   var expired = [], soon = [];
@@ -401,7 +404,7 @@ function buildDigestData_() {
     var key = name + '|' + lot;
     if (seen[key]) return;
     seen[key] = true;
-    var row = { name: name, lot: lot || '—', exp: fmtD_(exp), days: dd, qty: qty };
+    var row = { name: name, lot: lot || '—', exp: fmtD_(exp), days: dd, qty: (Number(qty) || 0), unit: unitByName[name] || '' };
     if (dd < 0) expired.push(row);
     else if (dd <= 90) soon.push(row);
   }
@@ -431,9 +434,9 @@ function digestHtml_(d) {
   }
   var h = '';
   h += sec('🚫 ของหมดอายุแล้ว — ห้ามใช้ ต้องนำออกทันที (' + d.expired.length + ')', '#8e1b0f',
-    d.expired.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'เลยกำหนด ' + (-r.days) + ' วัน']); }).join(''));
+    d.expired.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'เหลือ ' + r.qty + (r.unit ? ' ' + r.unit : ''), 'เลยกำหนด ' + (-r.days) + ' วัน']); }).join(''));
   h += sec('⏰ ใกล้ถึงวันหมดอายุ ภายใน 90 วัน (' + d.soon.length + ')', '#b26a00',
-    d.soon.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'อีก ' + r.days + ' วัน']); }).join(''));
+    d.soon.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'เหลือ ' + r.qty + (r.unit ? ' ' + r.unit : ''), 'อีก ' + r.days + ' วัน']); }).join(''));
   h += sec('🔴 หมดสต็อก — คงเหลือ 0 (' + d.outStock.length + ')', '#c0392b',
     d.outStock.map(function (i) { return tr([i.name, String(i.cat || ''), 'Min ' + (i.min || 0)]); }).join(''));
   h += sec('🟡 ใกล้หมดสต็อก — ถึงจุดต่ำสุด (' + d.low.length + ')', '#b26a00',
