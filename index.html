@@ -2073,7 +2073,7 @@ tr:hover td{background:var(--wh)}
           <div class="recv-old-stock" style="background:var(--bl);border-radius:var(--r4);padding:7px 8px;text-align:center;font-weight:700;color:var(--nv);font-size:13px">—</div>
           <div class="fg2" style="margin:0"><input type="number" placeholder="0" min="0" class="recv-qty"></div>
           <div class="lot-ac-wrap" style="margin:0;position:relative"><input type="text" class="recv-lot" placeholder="Lot No." oninput="showLotAC(this)" onfocus="showLotAC(this)" onblur="hideLotAcLater(this)" autocomplete="off" style="width:100%;box-sizing:border-box;border:1px solid var(--g2);border-radius:var(--r8);padding:7px 10px;font-size:12px;font-family:inherit;outline:none"><div class="ac-list lot-ac-list"></div></div>
-          <div style="margin:0;display:flex;gap:4px"><select class="recv-exp-month sel" style="flex:1;min-width:0;font-size:11px;padding:6px 2px"></select><select class="recv-exp-year sel" style="flex:1.35;min-width:0;font-size:11px;padding:6px 2px"></select></div>
+          <div style="margin:0;display:flex;gap:4px"><select class="recv-exp-day sel" style="flex:0.75;min-width:0;font-size:11px;padding:6px 1px"></select><select class="recv-exp-month sel" style="flex:1;min-width:0;font-size:11px;padding:6px 1px"></select><select class="recv-exp-year sel" style="flex:1.4;min-width:0;font-size:11px;padding:6px 1px"></select></div>
           <button class="btn sm" style="color:var(--rd-t)" onclick="this.closest('.rrow').remove()">🗑</button>
         </div>
       </div>
@@ -3143,7 +3143,7 @@ function addRrow(){
     +'<div class="recv-old-stock" style="background:var(--bl);border-radius:var(--r4);padding:7px 8px;text-align:center;font-weight:700;color:var(--nv);font-size:13px">—</div>'
     +'<div style="margin:0"><input type="number" placeholder="0" min="0" class="recv-qty" style="width:100%;border:1px solid var(--g2);border-radius:var(--r8);padding:7px 10px;font-size:12px;font-family:inherit;outline:none"></div>'
     +'<div class="lot-ac-wrap" style="margin:0;position:relative"><input type="text" class="recv-lot" placeholder="Lot No." oninput="showLotAC(this)" onfocus="showLotAC(this)" onblur="hideLotAcLater(this)" autocomplete="off" style="width:100%;box-sizing:border-box;border:1px solid var(--g2);border-radius:var(--r8);padding:7px 10px;font-size:12px;font-family:inherit;outline:none"><div class="ac-list lot-ac-list"></div></div>'
-    +'<div style="margin:0;display:flex;gap:4px"><select class="recv-exp-month sel" style="flex:1;min-width:0;font-size:11px;padding:6px 2px"></select><select class="recv-exp-year sel" style="flex:1.35;min-width:0;font-size:11px;padding:6px 2px"></select></div>'
+    +'<div style="margin:0;display:flex;gap:4px"><select class="recv-exp-day sel" style="flex:0.75;min-width:0;font-size:11px;padding:6px 1px"></select><select class="recv-exp-month sel" style="flex:1;min-width:0;font-size:11px;padding:6px 1px"></select><select class="recv-exp-year sel" style="flex:1.4;min-width:0;font-size:11px;padding:6px 1px"></select></div>'
     +'<button class="btn sm" style="color:var(--rd-t)" onclick="this.closest(&apos;.rrow&apos;).remove()">🗑</button>';
 
   c.appendChild(d);
@@ -3372,6 +3372,7 @@ function pickLotSuggestion(input, s){
     var rrow=input.closest('.rrow'); var d=(typeof parseExpDate==='function')?parseExpDate(s.exp):null;
     if(rrow && d && !isNaN(d)){
       var mo=rrow.querySelector('.recv-exp-month'), yr=rrow.querySelector('.recv-exp-year');
+      var dy=rrow.querySelector('.recv-exp-day'); if(dy && !dy.value) dy.value = String(d.getDate());
       if(mo && !mo.value) mo.value = String(d.getMonth()+1);
       if(yr && !yr.value){
         var ceY=String(d.getFullYear());
@@ -3385,6 +3386,11 @@ function pickLotSuggestion(input, s){
 }
 
 // สร้างตัวเลือกเดือน/ปี (ปีแสดงทั้ง ค.ศ. และ พ.ศ. — เก็บค่าเป็น ค.ศ.)
+function recvDayOptsHTML(){
+  var h='<option value="">วัน</option>';
+  for(var d=1;d<=31;d++){ h+='<option value="'+d+'">'+d+'</option>'; }
+  return h;
+}
 function recvMonthOptsHTML(){
   var h='<option value="">เดือน</option>';
   for(var m=1;m<=12;m++){ h+='<option value="'+m+'">'+('0'+m).slice(-2)+' '+TH_MONTHS[m-1]+'</option>'; }
@@ -3396,6 +3402,7 @@ function recvYearOptsHTML(){
   return h;
 }
 function initRecvExpSelects(){
+  document.querySelectorAll('#pg-recv .recv-exp-day').forEach(function(s){ if(!s.dataset.init){ s.innerHTML=recvDayOptsHTML(); s.dataset.init='1'; } });
   document.querySelectorAll('#pg-recv .recv-exp-month').forEach(function(s){ if(!s.dataset.init){ s.innerHTML=recvMonthOptsHTML(); s.dataset.init='1'; } });
   document.querySelectorAll('#pg-recv .recv-exp-year').forEach(function(s){ if(!s.dataset.init){ s.innerHTML=recvYearOptsHTML(); s.dataset.init='1'; } });
 }
@@ -3494,6 +3501,7 @@ function clearRecv(){
     rows.forEach((r,i)=>{
       if(i>0){ r.remove(); return; }
       r.querySelectorAll('input').forEach(inp=>inp.value='');
+      const dy=r.querySelector('.recv-exp-day'); if(dy) dy.value='';
       const mo=r.querySelector('.recv-exp-month'); if(mo) mo.value='';
       const yr=r.querySelector('.recv-exp-year'); if(yr) yr.value='';
       delete r.dataset.itemCode;
@@ -3719,6 +3727,7 @@ function saveWd(){
     const nameInp = row.querySelector('input[type=text]');
     const qtyInp  = row.querySelector('.recv-qty') || row.querySelector('input[type=number]');
     const lotInp  = row.querySelector('.recv-lot') || row.querySelectorAll('input[type=text]')[1];
+    const daySel  = row.querySelector('.recv-exp-day');
     const moSel   = row.querySelector('.recv-exp-month');
     const yrSel   = row.querySelector('.recv-exp-year');
     if (!nameInp || !qtyInp) return;
@@ -3726,11 +3735,13 @@ function saveWd(){
     const qty  = parseInt(qtyInp.value) || 0;
     if (!name || qty <= 0) return;
     const lot = lotInp ? lotInp.value.trim() || '—' : '—';
-    // เก็บวันหมดอายุเป็น ค.ศ. เสมอ (YYYY-MM-วันสุดท้ายของเดือน) แปลงเป็น พ.ศ. เฉพาะตอนแสดงผล
+    // เก็บวันหมดอายุเป็น ค.ศ. เสมอ (YYYY-MM-DD) แปลงเป็น พ.ศ. เฉพาะตอนแสดงผล
+    // มีวัน → ใช้วันที่เลือก · ไม่มีวัน → ใช้วันสุดท้ายของเดือน
     let exp = '';
     if (moSel && yrSel && moSel.value && yrSel.value) {
       const _last = new Date(parseInt(yrSel.value,10), parseInt(moSel.value,10), 0).getDate();
-      exp = yrSel.value + '-' + ('0'+moSel.value).slice(-2) + '-' + ('0'+_last).slice(-2);
+      const _day  = (daySel && daySel.value) ? Math.min(parseInt(daySel.value,10), _last) : _last;
+      exp = yrSel.value + '-' + ('0'+moSel.value).slice(-2) + '-' + ('0'+_day).slice(-2);
     }
     const item = ITEMS.find(i => i.name === name || i.code === name ||
       i.name.toLowerCase().includes(name.toLowerCase()) ||
@@ -3780,6 +3791,7 @@ function saveWd(){
       const ni = r.querySelector('input[type=text]'); if(ni) ni.value='';
       const qi = r.querySelector('.recv-qty,input[type=number]'); if(qi) qi.value='';
       const li = r.querySelector('.recv-lot'); if(li) li.value='';
+      const dy = r.querySelector('.recv-exp-day'); if(dy) dy.value='';
       const mo = r.querySelector('.recv-exp-month'); if(mo) mo.value='';
       const yr = r.querySelector('.recv-exp-year'); if(yr) yr.value='';
       delete r.dataset.itemCode;
