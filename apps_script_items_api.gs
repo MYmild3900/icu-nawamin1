@@ -434,9 +434,9 @@ function digestHtml_(d) {
   }
   var h = '';
   h += sec('🚫 ของหมดอายุแล้ว — ห้ามใช้ ต้องนำออกทันที (' + d.expired.length + ')', '#8e1b0f',
-    d.expired.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'เหลือ ' + r.qty + (r.unit ? ' ' + r.unit : ''), 'เลยกำหนด ' + (-r.days) + ' วัน']); }).join(''));
+    d.expired.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'จำนวน ' + r.qty + (r.unit ? ' ' + r.unit : ''), 'เลยกำหนด ' + (-r.days) + ' วัน']); }).join(''));
   h += sec('⏰ ใกล้ถึงวันหมดอายุ ภายใน 90 วัน (' + d.soon.length + ')', '#b26a00',
-    d.soon.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'เหลือ ' + r.qty + (r.unit ? ' ' + r.unit : ''), 'อีก ' + r.days + ' วัน']); }).join(''));
+    d.soon.map(function (r) { return tr([r.name, 'Lot ' + r.lot, 'หมดอายุ ' + r.exp, 'จำนวน ' + r.qty + (r.unit ? ' ' + r.unit : ''), 'อีก ' + r.days + ' วัน']); }).join(''));
   h += sec('🔴 หมดสต็อก — คงเหลือ 0 (' + d.outStock.length + ')', '#c0392b',
     d.outStock.map(function (i) { return tr([i.name, String(i.cat || ''), 'Min ' + (i.min || 0)]); }).join(''));
   h += sec('🟡 ใกล้หมดสต็อก — ถึงจุดต่ำสุด (' + d.low.length + ')', '#b26a00',
