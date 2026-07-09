@@ -2405,7 +2405,7 @@ tr:hover td{background:var(--wh)}
           <div class="card" style="padding:14px;text-align:center">
             <div class="qr-img-box" style="width:100%;height:140px;background:linear-gradient(135deg,var(--bl),var(--bg));border-radius:var(--r8);display:flex;align-items:center;justify-content:center;margin-bottom:10px;border:1px solid var(--g1);font-size:56px">💉</div>
             <span class="sts so qr-status" style="font-size:13px;padding:4px 14px">● stock ปกติ</span>
-            <div style="margin-top:8px;font-size:10px;color:var(--g4)">อัปเดต: 23/06/69</div>
+            <div id="qr-updated" style="margin-top:8px;font-size:10px;color:var(--g4)"></div>
             <input type="file" id="qr-img-file" accept="image/*" style="display:none" onchange="changeQRImg(this)">
             <button class="btn" style="width:100%;margin-top:8px;justify-content:center;font-size:11px" onclick="document.getElementById('qr-img-file').click()">🖼️ เปลี่ยนรูป</button>
           </div>
@@ -2444,15 +2444,8 @@ tr:hover td{background:var(--wh)}
             </div>
           </div>
           <div class="card" style="padding:14px">
-            <div style="font-size:12px;font-weight:600;color:var(--nv);margin-bottom:8px">Lot ในคลัง — FIFO (รับก่อนใช้ก่อน)</div>
-            <div id="qr-lot-row" class="lot" style="background:var(--ok-b);border-color:var(--ok-d)">
-              <span id="qr-lot-num" style="background:var(--ok-t);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">1</span>
-              <div style="flex:1">
-                <div id="qr-lot-val" style="font-weight:600;color:var(--ok-t)">Lot 2408</div>
-                <div id="qr-lot-recv" style="font-size:10px;color:var(--g4)">รับ 01/03/69 · หมด 31/03/70 · 260 ชิ้น</div>
-              </div>
-              <span style="background:var(--ok-t);color:#fff;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600">👆 ใช้ก่อน</span>
-            </div>
+            <div style="font-size:12px;font-weight:600;color:var(--nv);margin-bottom:8px">Lot ในคลัง — FEFO (หมดอายุก่อนใช้ก่อน)</div>
+            <div id="qr-lots-container"></div>
           </div>
         </div>
       </div>
@@ -3009,15 +3002,38 @@ function renderQRResult(item){
   setEl('qr-upk','textContent',item.unit+' ('+item.unitPack+')');
   setEl('qr-cat2','textContent',item.cat);
   setEl('qr-code2','textContent',item.code);
-  // lot
-  const lotColor=item.status==='ok'?'var(--ok-t)':'var(--wn-t)';
-  const lotBg=item.status==='ok'?'var(--ok-b)':'var(--wn-b)';
-  setEl('qr-lot-val','textContent',item.lot);
-  setEl('qr-lot-recv','textContent','รับ '+item.recv+' · หมด '+item.exp+' · '+item.cur+' '+item.unit);
-  const lotRow=document.getElementById('qr-lot-row');
-  if(lotRow){lotRow.style.background=lotBg; lotRow.style.borderColor=lotColor;}
-  const lotNum=document.getElementById('qr-lot-num');
-  if(lotNum) lotNum.style.background=lotColor;
+  // อัปเดตล่าสุด (จากวันรับล่าสุด)
+  setEl('qr-updated','textContent', (item.recv && item.recv!=='—') ? ('อัปเดตล่าสุด: '+item.recv) : '');
+  // lot — แสดงทุกล็อตที่ยังมีของ (จำนวนจริงของแต่ละล็อต) + "ยอดตั้งต้น" ที่ยังไม่ระบุล็อต
+  //       ให้ผลรวมทั้งหมด = คงเหลือเสมอ (แก้ปัญหา lot กับคงเหลือไม่ตรงกัน)
+  var lc = document.getElementById('qr-lots-container');
+  if(lc){
+    var activeLots = (item.lots||[]).filter(function(L){ return (parseFloat(L.qty)||0) > 0 && L.lot && L.lot!=='—'; });
+    activeLots.sort(function(a,b){ var da=parseExpDate(a.exp), db=parseExpDate(b.exp); return (da?da.getTime():Infinity)-(db?db.getTime():Infinity); });
+    var lotSum = activeLots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); }, 0);
+    var opening = (parseFloat(item.cur)||0) - lotSum;   // ยอดตั้งต้น/ไม่ระบุล็อต
+    var html='';
+    activeLots.forEach(function(L,i){
+      var first = i===0;
+      var col = first ? 'var(--ok-t)' : 'var(--g4)';
+      var bg  = first ? 'var(--ok-b)' : 'var(--g0)';
+      var tag = first ? '<span style="background:var(--ok-t);color:#fff;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;flex-shrink:0">👆 ใช้ก่อน</span>'
+                      : '<span style="background:var(--g1);color:var(--g5);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;flex-shrink:0">รอใช้</span>';
+      html += '<div class="lot" style="background:'+bg+';border-color:'+col+';margin-bottom:6px">'
+        + '<span style="background:'+col+';color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0">'+(i+1)+'</span>'
+        + '<div style="flex:1"><div style="font-weight:600;color:'+col+'">'+L.lot+'</div>'
+        + '<div style="font-size:10px;color:var(--g4)">รับ '+((L.recv&&L.recv!=='—')?L.recv:'—')+' · หมด '+fmtExp(L.exp)+' · '+L.qty+' '+item.unit+'</div></div>'
+        + tag + '</div>';
+    });
+    if(opening > 0){
+      html += '<div class="lot" style="background:var(--bl);border-color:var(--nv);margin-bottom:6px">'
+        + '<span style="background:var(--nv);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">•</span>'
+        + '<div style="flex:1"><div style="font-weight:600;color:var(--nv)">ยอดตั้งต้น (ไม่ระบุล็อต)</div>'
+        + '<div style="font-size:10px;color:var(--g4)">ของที่มีก่อนเริ่มบันทึกล็อต · '+opening+' '+item.unit+'</div></div></div>';
+    }
+    if(!html){ html = '<div style="font-size:11px;color:var(--g4);padding:8px">ยังไม่มีข้อมูลล็อต · คงเหลือรวม '+item.cur+' '+item.unit+'</div>'; }
+    lc.innerHTML = html;
+  }
   // edit button
   const editBtn=document.querySelector('#qrr button.btn.sm');
   if(editBtn) editBtn.onclick=function(){ openEdit(item.code, item.name); };
@@ -3336,12 +3352,7 @@ function getLotSuggestions(code, inputText){
 }
 
 // แสดง exp เป็น MM/ค.ศ. (พ.ศ. ...) จากค่าที่เก็บ (เก็บเป็น ค.ศ. เสมอ)
-function expLabel(exp){
-  var d = (typeof parseExpDate==='function') ? parseExpDate(exp) : null;
-  if(!d || isNaN(d)) return String(exp||'—');
-  var m = ('0'+(d.getMonth()+1)).slice(-2), y = d.getFullYear();
-  return m+'/'+y+' (พ.ศ. '+(y+BE_OFFSET)+')';
-}
+function expLabel(exp){ return fmtExp(exp); }   // ใช้รูปแบบเดียวกับทั้งระบบ (วว/ดด/พ.ศ.)
 
 function showLotAC(input){
   var rrow = input.closest('.rrow'); if(!rrow) return;
@@ -3568,7 +3579,7 @@ function selectWdItem(el, code){
 
     div.innerHTML = badge +
       '<div style="flex:1"><div class="lo-name">'+l.lot+'</div>' +
-      '<div class="lo-detail">รับเข้า '+l.recv+' · <span style="color:'+expColor+'">หมด '+l.exp+'</span></div></div>'+
+      '<div class="lo-detail">รับเข้า '+l.recv+' · <span style="color:'+expColor+'">หมด '+fmtExp(l.exp)+'</span></div></div>'+
       '<span class="lo-qty" style="color:var(--g5)">'+l.qty+' '+item.unit+'</span>'+
       tag;
     lotList.appendChild(div);
@@ -3585,7 +3596,7 @@ function selectLot(el, item, idx){
   // Poka-Yoke แบบเข้ม: เลือกข้ามล็อตที่หมดอายุก่อน ต้องยืนยันก่อน ไม่งั้นดีดกลับล็อตแรก
   if(idx > 0 && item.lots && item.lots[0]){
     var fl = item.lots[0];
-    var okSkip = confirm('⚠️ ตามหลัก FEFO ควรใช้ล็อต ' + fl.lot + ' ก่อน\n(หมดอายุ ' + fl.exp + ' · เหลือ ' + fl.qty + ' ' + (item.unit||'') + ')\n\nยืนยันจะเบิกล็อต ' + (el.dataset.lot||'') + ' แทนใช่ไหมคะ?');
+    var okSkip = confirm('⚠️ ตามหลัก FEFO ควรใช้ล็อต ' + fl.lot + ' ก่อน\n(หมดอายุ ' + fmtExp(fl.exp) + ' · เหลือ ' + fl.qty + ' ' + (item.unit||'') + ')\n\nยืนยันจะเบิกล็อต ' + (el.dataset.lot||'') + ' แทนใช่ไหมคะ?');
     if(!okSkip){
       var firstEl = container.querySelector('.lot-option');
       if(firstEl && firstEl !== el){ selectLot(firstEl, item, 0); }
@@ -3603,7 +3614,7 @@ function selectLot(el, item, idx){
   var warnMsg = container.querySelector('.poka-warn-msg');
   if(idx > 0 && warn && warnMsg){
     var firstLot = item.lots[0];
-    warnMsg.textContent = 'ยังมี '+firstLot.lot+' (หมด '+firstLot.exp+', เหลือ '+firstLot.qty+' '+item.unit+') ที่ควรใช้ก่อนค่ะ';
+    warnMsg.textContent = 'ยังมี '+firstLot.lot+' (หมด '+fmtExp(firstLot.exp)+', เหลือ '+firstLot.qty+' '+item.unit+') ที่ควรใช้ก่อนค่ะ';
     warn.classList.add('show');
   } else if(warn){
     warn.classList.remove('show');
@@ -5118,6 +5129,14 @@ function daysToExp(exp){
   var today = new Date(); today.setHours(0,0,0,0);
   return Math.round((d - today) / 86400000);
 }
+// จัดรูปแบบวันหมดอายุให้เหมือนกันทั้งระบบ = วว/ดด/ปปปป (พ.ศ.)
+// เก็บในชีตเป็น ค.ศ. หรือ พ.ศ. รูปแบบไหนก็ได้ — แสดงผลออกมาแบบเดียวเสมอ
+function fmtExp(exp){
+  if(exp===undefined || exp===null) return '—';
+  var d = parseExpDate(exp);
+  if(!d || isNaN(d)){ var s=String(exp).trim(); return (s && s!=='—' && s!=='-') ? s : '—'; }
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+(d.getFullYear()+543);
+}
 // หาล็อตที่ใกล้หมดอายุสุด (ที่ยังมีของ) ของพัสดุแต่ละตัว
 function soonestExpLot(item){
   var best=null, bestDays=null;
@@ -5148,7 +5167,7 @@ function renderExpiryAlerts(){
     else if(d<=30){ col='var(--rd-t)'; tag='อีก '+d+' วัน'; }
     else if(d<=60){ col='#d17a00'; tag='อีก '+d+' วัน'; }
     else { col='#b8860b'; tag='อีก '+d+' วัน'; }
-    var expTxt = (r.lot.exp && r.lot.exp!=='—') ? ' · หมดอายุ '+r.lot.exp : '';
+    var expTxt = (r.lot.exp && r.lot.exp!=='—') ? ' · หมดอายุ '+fmtExp(r.lot.exp) : '';
     var qty = (r.lot.qty!=null && r.lot.qty!=='') ? (parseFloat(r.lot.qty)||0) : null;
     var qtyTxt = (qty!=null) ? ' · <b style="color:'+col+'">จำนวน '+qty+' '+(r.item.unit||'')+'</b>' : '';
     return '<div class="ai"><span class="ad" style="background:'+col+'"></span>'
@@ -5528,7 +5547,7 @@ function lotMiniHTML(item) {
   var ls = (item.lots || []).filter(function(L){ return (parseFloat(L.qty)||0) > 0 && L.lot && L.lot !== '—'; });
   if (ls.length < 2) return '';
   var text  = ls.map(function(L){ return L.lot + ': ' + L.qty; }).join(' · ');
-  var title = ls.map(function(L){ return L.lot + ' เหลือ ' + L.qty + (L.exp && L.exp !== '—' ? ' (หมด ' + L.exp + ')' : ''); }).join('\n');
+  var title = ls.map(function(L){ return L.lot + ' เหลือ ' + L.qty + (L.exp && L.exp !== '—' ? ' (หมด ' + fmtExp(L.exp) + ')' : ''); }).join('\n');
   return '<div class="lot-mini" title="' + title.replace(/"/g,'&quot;') + '" style="font-size:9.5px;font-weight:400;color:var(--g5);margin-top:2px;line-height:1.4">🏷️ ' + text + '</div>';
 }
 
@@ -5560,7 +5579,7 @@ function renderStockTable() {
       '<td style="font-weight:700;color:'+sc+'">'+cur+lotMiniHTML(item)+'</td>' +
       '<td style="font-size:11px;color:var(--g5)">📍 '+(item.loc||'')+'</td>' +
       '<td style="font-size:11px;color:var(--g5)">—</td>' +
-      '<td style="font-size:11px">'+(item.exp||'—')+'</td>' +
+      '<td style="font-size:11px">'+fmtExp(item.exp)+'</td>' +
       '<td><span class="sts '+scls+'">'+slb+'</span></td>' +
       '<td><button class="btn sm" onclick="openEdit(\''+esc(cd)+'\',\''+esc(nm)+'\')" style="margin-right:4px">✏️</button>' +
       '<button class="btn sm" onclick="showQRCode(\''+esc(cd)+'\',\''+esc(nm)+'\')">⬜ QR</button></td>' +
