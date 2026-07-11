@@ -4287,11 +4287,9 @@ function syncACLists(){
       const st = item.cur<=0?'rd':item.cur<=item.min?'wn':'ok';
       stockEl.style.color = st==='ok'?'var(--ok-t)':st==='wn'?'var(--wn-t)':'var(--rd-t)';
     }
-    // อัปเดต onclick ให้ใช้ค่าใหม่
+    // อัปเดต onclick ให้ใช้ค่าใหม่ (ต้องตรงกับ selectWdItem(el, code) ปัจจุบัน)
     if(el.getAttribute('onclick') && el.getAttribute('onclick').includes('selectWdItem')){
-      el.setAttribute('onclick',
-        `selectWdItem(this,'${item.name}','${item.code}','${item.lot}','${item.recv}',${item.cur},'${item.unit}')`
-      );
+      el.setAttribute('onclick', `selectWdItem(this,'${item.code}')`);
     }
     if(el.getAttribute('onclick') && el.getAttribute('onclick').includes('selectRecvItem')){
       el.setAttribute('onclick',
