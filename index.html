@@ -3030,6 +3030,9 @@ function renderQRResult(item){
         + '<span style="background:var(--nv);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">•</span>'
         + '<div style="flex:1"><div style="font-weight:600;color:var(--nv)">ยอดตั้งต้น (ไม่ระบุล็อต)</div>'
         + '<div style="font-size:10px;color:var(--g4)">ของที่มีก่อนเริ่มบันทึกล็อต · '+opening+' '+item.unit+'</div></div></div>';
+    } else if(opening < 0){
+      html += '<div style="margin-top:2px;padding:8px 10px;border-radius:var(--r4);background:var(--wn-b);border:1px solid #fde68a;font-size:11px;color:var(--wn-t);font-weight:600">'
+        + '⚠️ ยอดรวมล็อต ('+lotSum+') มากกว่าคงเหลือ ('+item.cur+' '+item.unit+') — แนะนำตรวจนับจริงแล้วปรับยอดที่หน้า "นับสต็อก" ค่ะ</div>';
     }
     if(!html){ html = '<div style="font-size:11px;color:var(--g4);padding:8px">ยังไม่มีข้อมูลล็อต · คงเหลือรวม '+item.cur+' '+item.unit+'</div>'; }
     lc.innerHTML = html;
@@ -3585,6 +3588,18 @@ function selectWdItem(el, code){
     lotList.appendChild(div);
   });
 
+  // เตือนเมื่อยอดรวมล็อตไม่ตรงกับคงเหลือ (ข้อมูลสองฝั่งแตกกัน — ควรตรวจนับ)
+  var lotSum = item.lots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); }, 0);
+  var curNum = parseFloat(item.cur)||0;
+  if(lotSum !== curNum){
+    var mw = document.createElement('div');
+    mw.style.cssText='margin-top:6px;padding:7px 10px;border-radius:var(--r4);background:var(--wn-b);border:1px solid #fde68a;font-size:11px;color:var(--wn-t);font-weight:600';
+    mw.textContent = (lotSum>curNum)
+      ? '⚠️ ยอดรวมล็อต ('+lotSum+') มากกว่าคงเหลือ ('+curNum+' '+item.unit+') — แนะนำตรวจนับจริงแล้วปรับยอดที่หน้า "นับสต็อก" ค่ะ'
+      : 'ℹ️ มีของ '+(curNum-lotSum)+' '+item.unit+' ที่ยังไม่ระบุล็อต (ยอดตั้งต้นก่อนเริ่มบันทึกล็อต)';
+    lotList.appendChild(mw);
+  }
+
   lotWrap.style.display='block';
   // default เลือก lot แรก
   container.dataset.selectedLot = item.lots[0].lot;
@@ -3627,6 +3642,25 @@ function saveWd(){
   const now  = new Date();
   let saved  = 0;
   const syncPromises = [];
+
+  // Poka-Yoke: ห้ามเบิกเกินคงเหลือ (กันยอดคงเหลือกับทะเบียนล็อตแตกกัน)
+  var overErrs = [];
+  document.querySelectorAll('#pg-wd .wd-qty').forEach(function(qtyInp){
+    var container = qtyInp.closest('div[style]') || qtyInp.closest('.rrow');
+    if (!container) return;
+    var acInp = container.querySelector('.ac-wrap input');
+    var nameInp = acInp || container.querySelector('input[type=text]');
+    if (!nameInp || !nameInp.value.trim()) return;
+    var q = parseInt(qtyInp.value) || 0;
+    if (q <= 0) return;
+    var nm = nameInp.value.trim();
+    var it = ITEMS.find(function(i){ return i.name.toLowerCase().includes(nm.toLowerCase()) || nm.toLowerCase().includes(i.name.toLowerCase()); });
+    if (it && q > (parseFloat(it.cur)||0)) overErrs.push('• '+it.name+' — เบิก '+q+' แต่คงเหลือ '+it.cur+' '+(it.unit||''));
+  });
+  if (overErrs.length > 0) {
+    alert('❌ เบิกเกินยอดคงเหลือ ไม่สามารถบันทึกได้ค่ะ\n\n'+overErrs.join('\n')+'\n\nถ้าของจริงบนชั้นมีมากกว่าในระบบ กรุณาไปที่หน้า "นับสต็อก/ปรับยอด" เพื่อปรับยอดให้ตรงก่อนนะคะ');
+    return;
+  }
 
   // หาแถวเบิกทั้งหมด
   document.querySelectorAll('#pg-wd .wd-qty').forEach(qtyInp => {
