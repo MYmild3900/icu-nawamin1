@@ -3649,6 +3649,24 @@ function selectLot(el, item, idx){
 }
 
 function calcWdNew(input){ /* ไม่ใช้ */ }
+// หา item ประจำแถวฟอร์มรับ/เบิก — ลำดับความน่าเชื่อ: ชื่อตรงเป๊ะ → รหัสที่พิมพ์ → รหัสที่ผูกไว้ตอนเลือก → ชื่อคล้าย
+// (กันชื่อที่เป็น substring กัน เช่น DIS.NEEDLE 24G*1 กับ DIS.NEEDLE 24G*1 1/2 จับสลับตัว)
+function findRowItem(row, nm){
+  nm = (nm||'').trim();
+  var lower = nm.toLowerCase();
+  var code = null;
+  if(row){
+    code = row.dataset.itemCode || null;
+    if(!code){ var q=row.querySelector('.wd-qty'); if(q && q.dataset && q.dataset.code) code=q.dataset.code; }
+  }
+  var byCode = code ? ITEMS.find(function(i){ return String(i.code)===String(code); }) : null;
+  var exact = nm ? ITEMS.filter(function(i){ return i.name.toLowerCase()===lower; }) : [];
+  if(exact.length){ return (byCode && exact.indexOf(byCode)!==-1) ? byCode : exact[0]; }
+  if(nm){ var byTyped = ITEMS.find(function(i){ return String(i.code).toLowerCase()===lower; }); if(byTyped) return byTyped; }
+  if(byCode) return byCode;
+  if(!nm) return null;
+  return ITEMS.find(function(i){ return i.name.toLowerCase().includes(lower) || lower.includes(i.name.toLowerCase()); }) || null;
+}
 function saveWd(){
   const user = document.getElementById('sbn').textContent || 'พยาบาล';
   const now  = new Date();
@@ -3666,7 +3684,7 @@ function saveWd(){
     var q = parseInt(qtyInp.value) || 0;
     if (q <= 0) return;
     var nm = nameInp.value.trim();
-    var it = ITEMS.find(function(i){ return i.name.toLowerCase().includes(nm.toLowerCase()) || nm.toLowerCase().includes(i.name.toLowerCase()); });
+    var it = findRowItem(qtyInp.closest('.wd-item-row') || container, nm);
     if (it && q > (parseFloat(it.cur)||0)) overErrs.push('• '+it.name+' — เบิก '+q+' แต่คงเหลือ '+it.cur+' '+(it.unit||''));
   });
   if (overErrs.length > 0) {
@@ -3692,7 +3710,7 @@ function saveWd(){
     var lotRowEl = qtyInp.closest('.wd-item-row');
     var lot = (lotRowEl && lotRowEl.dataset.selectedLot) || container.dataset.selectedLot || '—';
     const unitEl = container.querySelector('.wd-unit');
-    const item  = ITEMS.find(i => i.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(i.name.toLowerCase()));
+    const item  = findRowItem(qtyInp.closest('.wd-item-row') || container, name);
     const code  = item ? item.code : '—';
     const unit  = item ? item.unit : (unitEl ? unitEl.textContent.trim() : '');
     const oldStock = item ? item.cur : 0;
@@ -3800,9 +3818,7 @@ function saveWd(){
       const _day  = (daySel && daySel.value) ? Math.min(parseInt(daySel.value,10), _last) : _last;
       exp = yrSel.value + '-' + ('0'+moSel.value).slice(-2) + '-' + ('0'+_day).slice(-2);
     }
-    const item = ITEMS.find(i => i.name === name || i.code === name ||
-      i.name.toLowerCase().includes(name.toLowerCase()) ||
-      name.toLowerCase().includes(i.name.toLowerCase()));
+    const item = findRowItem(row, name);
     const code = item ? item.code : '—';
     const unit = item ? item.unit : '';
     const oldStock = item ? (item.cur || 0) : 0;
