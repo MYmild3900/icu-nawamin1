@@ -281,6 +281,9 @@ function upsertLot(data) {
   var row = findLotRow_(sheet, data.code, lot, data.name);
   if (row === -1) {
     sheet.appendRow([String(data.code), data.name || '', lot, Number(data.qty) || 0, data.recv || '', data.exp || '']);
+    // บังคับช่องล็อตเป็นข้อความ — กัน Sheets ตีความชื่อล็อตแบบ 25E21 เป็นเลขวิทยาศาสตร์ (2.5e+22)
+    var newRow = sheet.getLastRow();
+    sheet.getRange(newRow, 3).setNumberFormat('@').setValue(lot);
     return { ok: true, created: true };
   }
   var cur = Number(sheet.getRange(row, 4).getValue()) || 0;
