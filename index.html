@@ -5146,8 +5146,9 @@ function showHistAC(input){
   if(v.length===0){ list.style.display='none'; return; }
   // build from ITEMS
   if(list.children.length===0 && typeof ITEMS!=='undefined'){
+    // ใช้ mousedown (ไม่ใช่ click) — click เกิดหลัง blur ของช่องค้นหา ลิสต์ถูกซ่อนก่อน ทำให้กดเลือกไม่ติด
     list.innerHTML = ITEMS.map(function(item){
-      return '<div class="ac-item" onclick="selectHistItem(this,&quot;'+item.name+'&quot;)">'
+      return '<div class="ac-item" onmousedown="event.preventDefault();selectHistItem(this,&quot;'+item.name+'&quot;)">'
         +'<span style="font-size:15px">'+item.icon+'</span>'
         +'<div><div class="ac-name">'+item.name+'</div><div class="ac-sub">'+item.code+'</div></div>'
         +'</div>';
