@@ -2743,6 +2743,9 @@ function doLogin(){
   document.getElementById('app').style.display='block';
   document.getElementById('sbn').textContent=u;
   document.getElementById('tnm').textContent=u;
+  // เข้าระบบแล้วเริ่มที่แดชบอร์ดเสมอ (ไม่ค้างหน้าที่เปิดไว้ก่อน logout)
+  var dashNi = document.querySelector(".ni[onclick*=\"go('dash'\"]");
+  if(typeof go==='function') go('dash', dashNi);
   setTimeout(function(){ updateDashStats(); updateDashLists(); }, 100);
 }
 document.getElementById('upw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
@@ -6038,16 +6041,22 @@ function saveStockCount(){
     return rows.length ? rows[rows.length - 1] : null;
   }
   window.handleWedgeScan = function(item){
-    // อยู่หน้าเบิกออก → เติมแถวว่าง + เปิดตัวเลือก Lot (FEFO)
+    // อยู่หน้าเบิกออก → เติมแถวว่าง + เปิดตัวเลือก Lot (FEFO) — ไม่มีแถวว่างให้เพิ่มแถวใหม่เอง
     var pgWd = document.getElementById('pg-wd');
     if(pgWd && pgWd.classList.contains('on')){
       var wrow = firstEmptyRow(pgWd, '.wd-item-row', '.wd-name-inp');
+      if(!wrow || (wrow.querySelector('.wd-name-inp') && wrow.querySelector('.wd-name-inp').value.trim())){
+        if(typeof addWdRow==='function'){ addWdRow(); wrow = firstEmptyRow(pgWd, '.wd-item-row', '.wd-name-inp'); }
+      }
       if(wrow && fillRowVia(wrow, function(d){ selectWdItem(d, item.code); })) return;
     }
-    // อยู่หน้ารับเข้า → เติมแถวว่าง
+    // อยู่หน้ารับเข้า → เติมแถวว่าง — ไม่มีแถวว่างให้เพิ่มแถวใหม่เอง
     var pgRecv = document.getElementById('pg-recv');
     if(pgRecv && pgRecv.classList.contains('on')){
       var rrow = firstEmptyRow(pgRecv, '.rrow', '.recv-search');
+      if(!rrow || (rrow.querySelector('.recv-search') && rrow.querySelector('.recv-search').value.trim())){
+        if(typeof addRrow==='function'){ addRrow(); rrow = firstEmptyRow(pgRecv, '.rrow', '.recv-search'); }
+      }
       if(rrow && fillRowVia(rrow, function(d){ selectRecvItem(d, item.name, item.code, item.cur, item.unit); })) return;
     }
     // หน้าอื่น → ไปหน้าคลังพัสดุแล้วแสดงรายการนั้น
