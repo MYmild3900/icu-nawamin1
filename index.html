@@ -6035,12 +6035,32 @@ function saveStockCount(){
     return String(s||'').split('').map(function(c){ return TH2EN[c] || c; }).join('');
   };
   var buf = '', last = 0, idleTimer = null;
+  // ลบตัวอักษรที่เครื่องสแกนพิมพ์ค้างในช่องกรอก (echo) — กันรหัสดิบค้างในช่องค้นหาแล้วเกิดแถวขยะ
+  function stripEcho_(el, raw){
+    if(!el || typeof el.value!=='string' || !el.value) return false;
+    var v = el.value, rn = wedgeNormalize(raw).toLowerCase();
+    var vn = wedgeNormalize(v).toLowerCase();
+    if(!rn || vn.slice(-rn.length) !== rn) return false;
+    el.value = v.slice(0, v.length - raw.length);
+    try{ el.dispatchEvent(new Event('input', {bubbles:true})); }catch(e){}
+    return true;
+  }
+  function cleanupWedgeEcho(raw){
+    if(!raw) return;
+    var ae = document.activeElement;
+    if(ae && (ae.tagName==='INPUT'||ae.tagName==='TEXTAREA')){ if(stripEcho_(ae, raw)) return; }
+    // โฟกัสอาจย้ายไปแล้ว — กวาดช่องข้อความบนหน้าที่เปิดอยู่ หาช่องที่มี echo ค้าง
+    var pg = document.querySelector('.pg.on');
+    if(!pg) return;
+    var inputs = pg.querySelectorAll('input[type=text], input:not([type])');
+    for(var i=0;i<inputs.length;i++){ if(stripEcho_(inputs[i], raw)) return; }
+  }
   function flushScan(){
     if(buf.length >= 4 && typeof ITEMS !== 'undefined'){
       var code = wedgeNormalize(buf).toLowerCase();
       var item = ITEMS.find(function(i){ return String(i.code).toLowerCase() === code; });
-      buf = '';
-      if(item){ handleWedgeScan(item); return true; }
+      var raw = buf; buf = '';
+      if(item){ cleanupWedgeEcho(raw); handleWedgeScan(item); return true; }
     }
     buf = '';
     return false;
