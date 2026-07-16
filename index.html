@@ -2739,6 +2739,15 @@ function doLogin(){
   const p=document.getElementById('upw').value;
   if(!u){alert('กรุณาเลือกชื่อผู้ใช้ค่ะ');return}
   if(!p){alert('กรุณากรอกรหัสผ่านค่ะ');return}
+  // ตรวจรหัสผ่านของผู้ใช้ที่เลือก (ยังไม่ตั้งรหัส = ใช้ค่าเริ่มต้น 1234)
+  var stf = (typeof STAFF!=='undefined') ? STAFF.find(function(s){ return u.indexOf(s.name)!==-1 || s.name===u; }) : null;
+  var expectPw = (stf && String(stf.pw||'').trim()) ? String(stf.pw).trim() : '1234';
+  if(p !== expectPw){
+    alert('❌ รหัสผ่านไม่ถูกต้องค่ะ ลองใหม่อีกครั้งนะคะ');
+    document.getElementById('upw').value='';
+    document.getElementById('upw').focus();
+    return;
+  }
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('sbn').textContent=u;
@@ -4727,7 +4736,7 @@ function loadStaffFromSheets(){
       // กัน gviz ส่ง tab อื่นมาแทนตอนไม่มี tab Staff — ต้องมีคอลัมน์ name และ role จริง
       if(!rows.length || rows[0].name === undefined || rows[0].role === undefined) return;
       var loaded = rows.filter(function(r){ return (r.name||'').trim() !== ''; })
-        .map(function(r,i){ return { id: parseInt(r.id)||i+1, name: r.name.trim(), pos: (r.pos||'').trim(), role: (r.role||'user').trim() }; });
+        .map(function(r,i){ return { id: parseInt(r.id)||i+1, name: r.name.trim(), pos: (r.pos||'').trim(), role: (r.role||'user').trim(), pw: String(r.pw||'').trim() }; });
       if(loaded.length === 0) return;
       STAFF.length = 0;
       loaded.forEach(function(s){ STAFF.push(s); });
@@ -4743,12 +4752,14 @@ function saveStaff(){
   var role = document.getElementById('staff-role').value;
   if(!name){ alert('กรุณากรอกชื่อ-สกุลค่ะ'); return; }
 
+  var pwInp = document.getElementById('staff-pw');
+  var pw = pwInp ? pwInp.value.trim() : '';
   if(editingStaffId){
     var s = STAFF.find(function(st){return st.id===editingStaffId;});
-    if(s){ s.name=name; s.pos=pos; s.role=role; }
+    if(s){ s.name=name; s.pos=pos; s.role=role; if(pw) s.pw=pw; }   // เว้นว่าง = คงรหัสเดิม
   } else {
     var newId = STAFF.length ? Math.max.apply(null, STAFF.map(function(s){return s.id;}))+1 : 1;
-    STAFF.push({id:newId, name:name, pos:pos, role:role});
+    STAFF.push({id:newId, name:name, pos:pos, role:role, pw: pw || '1234'});
   }
   renderStaffTable();
   if(typeof updateLoginOptions==='function') updateLoginOptions();

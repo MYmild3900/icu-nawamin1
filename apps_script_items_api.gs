@@ -312,7 +312,11 @@ function getStaffSheet_() {
   var sheet = ss.getSheetByName('Staff');
   if (!sheet) {
     sheet = ss.insertSheet('Staff');
-    sheet.getRange(1, 1, 1, 4).setValues([['id', 'name', 'pos', 'role']]);
+    sheet.getRange(1, 1, 1, 5).setValues([['id', 'name', 'pos', 'role', 'pw']]);
+  }
+  // เติมหัวคอลัมน์ pw ให้ชีตเก่าที่ยังไม่มี (ซ่อมตัวเอง)
+  if (String(sheet.getRange(1, 5).getValue()).trim() !== 'pw') {
+    sheet.getRange(1, 5).setValue('pw');
   }
   return sheet;
 }
@@ -326,20 +330,20 @@ function getStaff() {
   for (var i = 1; i < rows.length; i++) {
     var r = rows[i];
     if (!r[1]) continue;
-    staff.push({ id: Number(r[0]) || i, name: String(r[1]), pos: String(r[2] || ''), role: String(r[3] || 'user') });
+    staff.push({ id: Number(r[0]) || i, name: String(r[1]), pos: String(r[2] || ''), role: String(r[3] || 'user'), pw: String(r[4] || '') });
   }
   return { ok: true, staff: staff };
 }
 
-// บันทึกรายชื่อทั้งชุด (snapshot แทนที่ของเดิม)
+// บันทึกรายชื่อทั้งชุด (snapshot แทนที่ของเดิม) — รวมรหัสผ่าน (คอลัมน์ pw)
 function saveStaffList(staffArr) {
   var sheet = getStaffSheet_();
   var last = sheet.getLastRow();
-  if (last > 1) sheet.getRange(2, 1, last - 1, 4).clearContent();
+  if (last > 1) sheet.getRange(2, 1, last - 1, 5).clearContent();
   var rows = (staffArr || []).map(function (s) {
-    return [Number(s.id) || '', String(s.name || ''), String(s.pos || ''), String(s.role || 'user')];
+    return [Number(s.id) || '', String(s.name || ''), String(s.pos || ''), String(s.role || 'user'), String(s.pw || '')];
   }).filter(function (r) { return r[1] !== ''; });
-  if (rows.length > 0) sheet.getRange(2, 1, rows.length, 4).setValues(rows);
+  if (rows.length > 0) sheet.getRange(2, 1, rows.length, 5).setValues(rows);
   return { ok: true, saved: rows.length };
 }
 
