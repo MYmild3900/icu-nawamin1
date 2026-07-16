@@ -3853,12 +3853,23 @@ function saveWd(){
 }
 function clearWd(){
   if(confirm('ล้างข้อมูล?')){
-    document.querySelectorAll('#pg-wd .ac-wrap input').forEach(i=>i.value='');
-    document.querySelectorAll('#pg-wd .wd-lot-val').forEach(i=>i.textContent='—');
-    document.querySelectorAll('#pg-wd .wd-current').forEach(i=>i.textContent='—');
-    document.querySelectorAll('#pg-wd .wd-unit').forEach(i=>i.textContent='—');
-    document.querySelectorAll('#pg-wd .wd-qty').forEach(i=>i.value='');
-    document.querySelectorAll('#pg-wd .wd-new').forEach(i=>i.textContent='—');
+    // ล้างให้ครบเหมือนหลังบันทึกสำเร็จ: เหลือแถวเปล่าแถวเดียว + ซ่อนกล่องเลือกล็อต
+    document.querySelectorAll('#pg-wd .wd-item-row').forEach(function(r,i){
+      if(i>0){ r.remove(); return; }
+      var ni=r.querySelector('.wd-name-inp'); if(ni) ni.value='';
+      r.querySelectorAll('.ac-wrap input').forEach(function(inp){ inp.value=''; });
+      var al=r.querySelector('.ac-list'); if(al) al.style.display='none';
+      var lv=r.querySelector('.wd-lot-val'); if(lv) lv.textContent='—';
+      var cu=r.querySelector('.wd-current'); if(cu){ cu.textContent='—'; cu.style.background='var(--ok-b)'; cu.style.color='var(--ok-t)'; }
+      var un=r.querySelector('.wd-unit'); if(un) un.textContent='—';
+      var qu=r.querySelector('.wd-qty'); if(qu) qu.value='';
+      var nw=r.querySelector('.wd-new'); if(nw) nw.textContent='—';
+      var lw=r.querySelector('.lot-select-wrap');
+      if(lw){ lw.style.display='none'; var ll=lw.querySelector('.lot-options-list'); if(ll) ll.innerHTML=''; var pw=lw.querySelector('.poka-warn'); if(pw) pw.classList.remove('show'); }
+      delete r.dataset.selectedLot; delete r.dataset.selectedLotIdx;
+    });
+    var wdNote=document.querySelector('#pg-wd .fr.two input[type=text]');
+    if(wdNote) wdNote.value='';
   }
 }
 
