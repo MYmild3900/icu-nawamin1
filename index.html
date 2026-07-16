@@ -311,6 +311,11 @@ tr:hover td{background:var(--wh)}
 .mobile-nav-grid{
   display:grid;grid-template-columns:repeat(5,1fr);
 }
+/* สิทธิ์ผู้ใช้ทั่วไป (role-user): ซ่อนปุ่มแก้ไข/เพิ่มพัสดุ/Export ทุกจุด */
+body.role-user [onclick^="openEdit"],
+body.role-user [onclick^="openAddItem"],
+body.role-user [onclick^="exportHist"],
+body.role-user [onclick^="openAddStaff"]{display:none !important}
 .mn-item{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:8px 4px;cursor:pointer;color:rgba(255,255,255,0.5);
@@ -2752,16 +2757,43 @@ function doLogin(){
   document.getElementById('app').style.display='block';
   document.getElementById('sbn').textContent=u;
   document.getElementById('tnm').textContent=u;
+  // จำ role ของผู้ใช้ที่ล็อกอิน — ใช้กำหนดสิทธิ์ทั้งระบบ
+  window.CURRENT_ROLE = (stf && stf.role) ? stf.role : 'user';
+  window.CURRENT_USER_NAME = stf ? stf.name : u;
+  applyRolePermissions();
   // เข้าระบบแล้วเริ่มที่แดชบอร์ดเสมอ (ไม่ค้างหน้าที่เปิดไว้ก่อน logout)
   var dashNi = document.querySelector(".ni[onclick*=\"go('dash'\"]");
   if(typeof go==='function') go('dash', dashNi);
   setTimeout(function(){ updateDashStats(); updateDashLists(); }, 100);
+}
+// ── สิทธิ์ผู้ใช้: admin = ทุกอย่าง · user = รับเข้า/เบิกออก/ดูคลัง/สแกน เท่านั้น ──
+var ADMIN_PAGES = ['rpt','req','count','sc','cfg'];   // รายงาน สรุปเบิก นับสต็อก Stock Card ตั้งค่าระบบ
+function isAdmin(){ return (window.CURRENT_ROLE||'admin')==='admin'; }
+function denyNonAdmin(){
+  if(isAdmin()) return false;
+  alert('🔒 ส่วนนี้สำหรับผู้ดูแลระบบ (Admin) เท่านั้นค่ะ');
+  return true;
+}
+function applyRolePermissions(){
+  var admin = isAdmin();
+  document.body.classList.toggle('role-user', !admin);
+  var hideIf = function(el){
+    var oc = el.getAttribute('onclick')||'';
+    var hit = ADMIN_PAGES.some(function(p){ return oc.indexOf("'"+p+"'")>-1; });
+    el.style.display = (!admin && hit) ? 'none' : '';
+  };
+  document.querySelectorAll('.ni').forEach(hideIf);
+  document.querySelectorAll('.mn-item').forEach(hideIf);
 }
 document.getElementById('upw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 function doLogout(){if(confirm('ต้องการออกจากระบบ?')){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('usel').value='';document.getElementById('upw').value=''}}
 
 const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',req:'สรุปเบิกรายเดือน',count:'นับสต็อก / ปรับยอด',sc:'Stock Card',qr:'สแกน QR Code',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
 function go(id,el){
+  if(typeof isAdmin==='function' && !isAdmin() && typeof ADMIN_PAGES!=='undefined' && ADMIN_PAGES.indexOf(id)>-1){
+    alert('🔒 ส่วนนี้สำหรับผู้ดูแลระบบ (Admin) เท่านั้นค่ะ');
+    return;
+  }
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
   const p=document.getElementById('pg-'+id);if(p)p.classList.add('on');
@@ -3054,6 +3086,7 @@ function renderQRResult(item){
   if(editBtn) editBtn.onclick=function(){ openEdit(item.code, item.name); };
 }
 function openEdit(c,n){
+  if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   var item = ITEMS.find(function(i){return i.code===c;});
   if(!item) return;
   document.getElementById('en').textContent = n;
@@ -4034,7 +4067,10 @@ function renderHist(){
   const summEl = document.getElementById('hist-summary');
   if (!tbody) return;
 
+  // ผู้ใช้ทั่วไปเห็นเฉพาะรายการที่ตัวเองทำ (admin เห็นทั้งหมด)
+  const meName = (typeof isAdmin==='function' && !isAdmin()) ? String(window.CURRENT_USER_NAME||'').trim() : '';
   let filtered = TXLOG.filter(tx => {
+    const mineOk   = !meName || String(tx.user||'').indexOf(meName) > -1;
     const typeOk   = typeF === 'all' || tx.type === typeF;
     const searchOk = !searchF || tx.name.toLowerCase().includes(searchF) || tx.code.toLowerCase().includes(searchF);
     let dateOk = true;
@@ -4042,7 +4078,7 @@ function renderHist(){
       const d = tx.rawDate ? new Date(tx.rawDate) : null;
       dateOk = !!d && !isNaN(d) && (!fromD || d >= fromD) && (!toD || d <= toD);
     }
-    return typeOk && searchOk && dateOk;
+    return mineOk && typeOk && searchOk && dateOk;
   });
 
   if (filtered.length === 0) {
@@ -4105,6 +4141,7 @@ function updateDashStats(){
 
 // ── EXPORT ──
 function exportHist(){
+  if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   if (TXLOG.length === 0) { alert('ยังไม่มีข้อมูลประวัติค่ะ'); return; }
   let csv = 'วันที่,ประเภท,ชื่อพัสดุ,รหัส,Lot,จำนวน,หน่วย,ผู้ทำรายการ,คงเหลือ\n';
   TXLOG.forEach(tx => {
@@ -4707,6 +4744,7 @@ var STAFF = [
 var editingStaffId = null;
 
 function openAddStaff(){
+  if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   editingStaffId = null;
   document.getElementById('staff-modal-title').textContent = '➕ เพิ่มบุคลากร';
   document.getElementById('staff-name').value = '';
@@ -4717,6 +4755,7 @@ function openAddStaff(){
 }
 
 function editStaff(id){
+  if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   var s = STAFF.find(function(st){return st.id===id;});
   if(!s) return;
   editingStaffId = id;
@@ -4785,6 +4824,7 @@ function saveStaff(){
 }
 
 function deleteStaff(id){
+  if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   var s = STAFF.find(function(st){return st.id===id;});
   if(!s) return;
   if(STAFF.length <= 1){ alert('ลบไม่ได้ค่ะ — ต้องเหลือบุคลากรอย่างน้อย 1 คนในระบบ'); return; }
@@ -4827,6 +4867,7 @@ function updateLoginOptions(){
       }).join('');
 }
 function openAddItem(){
+  if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   // clear fields
   ['add-code','add-name','add-unit','add-loc','add-lot'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -5982,6 +6023,7 @@ function renderCountTable(){
 }
 
 function saveStockCount(){
+  if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   var changes = [];
   document.querySelectorAll('#count-tbody .cnt-inp').forEach(function(inp){
     if(inp.value === '') return;
