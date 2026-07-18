@@ -56,6 +56,8 @@ function doPost(e) {
     else if (action === 'upsertLot')   result = upsertLot(data);
     else if (action === 'deductLot')   result = deductLot(data);
     else if (action === 'saveStaff')   result = saveStaffList(data.staff);
+    else if (action === 'updateUnitPack') result = updateUnitPack(data.code, data.unitPack);
+    else if (action === 'mergeLots')   result = mergeLots(data.code);
     else if (action === 'addLot')      result = { error: 'addLot ถูกปิดการใช้งานแล้ว — ใช้ upsertLot/deductLot แทน (ไม่แทรกแถวในชีตพัสดุ)' };
     else result = { error: 'Unknown action' };
   } catch (err) {
@@ -112,7 +114,7 @@ function getItems() {
         recv: r[8] || '-', exp: r[9] || '-',
         imgUrl: r[11] || '',
         status: cur <= 0 ? 'rd' : cur <= min ? 'wn' : 'ok',
-        unitPack: '-',
+        unitPack: (r[10] || '-').toString().trim() || '-',   // คอลัมน์ K = หน่วยต่อกล่อง เช่น "10 ชิ้น/กล่อง"
         lots: [{ lot: r[7] || '-', recv: r[8] || '-', exp: r[9] || '-', qty: cur }]
       });
     }
@@ -184,10 +186,84 @@ function addItem(item) {
   sheet.getRange(insertAt, 1, 1, 12).setValues([[
     item.code, item.name, item.unit,
     item.min || 0, item.max || 0, item.cur || 0,
-    item.loc || '', lot.lot || '', lot.recv || '', lot.exp || '', '',
+    item.loc || '', lot.lot || '', lot.recv || '', lot.exp || '', (item.unitPack && item.unitPack !== '—') ? item.unitPack : '',
     (item.imgUrl && item.imgUrl.indexOf('http') === 0) ? item.imgUrl : ''
   ]]);
   return { ok: true };
+}
+
+// ── updateUnitPack: แก้หน่วยต่อกล่อง (คอลัมน์ K) ในแถวเดิมของชีตหมวด ──
+function fixUnitPackHeader_(sh) {
+  // เปลี่ยนหัวคอลัมน์ K จาก "หมายเหตุ" (ไม่ได้ใช้) เป็น "หน่วยต่อกล่อง" — ซ่อมตัวเอง
+  var h = (sh.getRange(3, 11).getValue() || '').toString().trim();
+  if (h.indexOf('หน่วยต่อกล่อง') === -1) sh.getRange(3, 11).setValue('หน่วยต่อกล่อง');
+}
+function updateUnitPack(code, unitPack) {
+  if (!code) return { error: 'ไม่มีรหัสพัสดุ' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheets = ss.getSheets();
+  var codeStr = code.toString().trim();
+  for (var s = 0; s < sheets.length; s++) {
+    var sh = sheets[s];
+    if (!isItemSheet(sh)) continue;
+    var lastRow = sh.getLastRow();
+    if (lastRow < 4) continue;
+    var colA = sh.getRange(4, 1, lastRow - 3, 1).getValues();
+    for (var i = 0; i < colA.length; i++) {
+      if ((colA[i][0] || '').toString().trim() === codeStr) {
+        fixUnitPackHeader_(sh);
+        sh.getRange(i + 4, 11).setValue((unitPack && unitPack !== '—') ? String(unitPack) : '');
+        return { ok: true, sheet: sh.getName(), row: i + 4 };
+      }
+    }
+  }
+  return { error: 'Item not found: ' + codeStr };
+}
+
+// ▶ กดรันครั้งเดียวหลัง deploy: เปลี่ยนหัวคอลัมน์ K เป็น "หน่วยต่อกล่อง" ทุกชีตหมวด
+function setupUnitPackHeaders() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var done = [];
+  ss.getSheets().forEach(function (sh) {
+    if (!isItemSheet(sh)) return;
+    fixUnitPackHeader_(sh);
+    done.push(sh.getName());
+  });
+  Logger.log('ตั้งหัวคอลัมน์ "หน่วยต่อกล่อง" (K3) แล้ว: ' + done.join(', '));
+}
+
+// ── mergeLots: รวมแถวล็อตซ้ำ (code+lot เดียวกันหลายแถว) ให้เหลือแถวเดียว ──
+// รวมยอด qty เข้าแถวแรก ลบแถวซ้ำทิ้ง และบังคับช่องล็อตเป็นข้อความ
+function mergeLots(code) {
+  if (!code) return { error: 'ไม่มีรหัสพัสดุ' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('Lot');
+  if (!sheet) return { ok: true, merged: 0 };
+  var last = sheet.getLastRow();
+  if (last < 2) return { ok: true, merged: 0 };
+  var vals = sheet.getRange(2, 1, last - 1, 6).getValues();
+  var codeStr = String(code).trim();
+  var firstRowOf = {};       // ชื่อล็อต → เลขแถวแรกที่พบ
+  var toDelete = [];
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]).trim() !== codeStr) continue;
+    var lotName = String(vals[i][2]).trim();
+    var rowNum = i + 2;
+    if (firstRowOf[lotName] === undefined) {
+      firstRowOf[lotName] = rowNum;
+      sheet.getRange(rowNum, 3).setNumberFormat('@').setValue(lotName);
+    } else {
+      // แถวซ้ำ — โอนยอดเข้าแถวแรก แล้วจดไว้ลบ
+      var keep = firstRowOf[lotName];
+      var cur = Number(sheet.getRange(keep, 4).getValue()) || 0;
+      sheet.getRange(keep, 4).setValue(cur + (Number(vals[i][3]) || 0));
+      toDelete.push(rowNum);
+    }
+  }
+  // ลบจากล่างขึ้นบน กันเลขแถวเลื่อน
+  toDelete.sort(function (a, b) { return b - a; });
+  toDelete.forEach(function (r) { sheet.deleteRow(r); });
+  return { ok: true, merged: toDelete.length };
 }
 
 // ── addLog / getLog: สำรองไว้ (แอปหลักบันทึกประวัติผ่าน History API อีกโปรเจกต์) ──
@@ -392,6 +468,9 @@ function fmtD_(exp) {
 }
 
 // รวบรวมข้อมูลแจ้งเตือนทั้ง 4 กลุ่ม
+// หมวดหมดอายุใช้ตรรกะเดียวกับแดชบอร์ดเว็บทุกประการ:
+// 1 พัสดุ = 1 แถว โดยดู "ล็อตที่ใกล้หมดอายุสุดที่ยังมีของ" (ทะเบียน Lot ก่อน
+// ถ้าพัสดุนั้นไม่มีในทะเบียนเลย ค่อยใช้คอลัมน์ exp ของชีตหมวด) — รายการในเมลจึงตรงกับหน้าเว็บ
 function buildDigestData_() {
   var items = getItems().items;
   var outStock = items.filter(function (i) { return (Number(i.cur) || 0) <= 0; });
@@ -399,29 +478,29 @@ function buildDigestData_() {
     var c = Number(i.cur) || 0, m = Number(i.min) || 0;
     return c > 0 && m > 0 && c <= m;
   });
-  // แผนที่หน่วยนับ (ตามชื่อพัสดุ) เพื่อแสดง "เหลือ N หน่วย" ในอีเมล
-  var unitByName = {};
-  items.forEach(function (i) { if (i.name) unitByName[i.name] = i.unit || ''; });
-  // วันหมดอายุ: จาก tab Lot (ราย lot ที่ยังมีของ) + จากคอลัมน์ exp ของชีตหมวด (ตัวที่ไม่มีใน Lot)
-  var seen = {};
-  var expired = [], soon = [];
-  function consider(name, lot, exp, qty) {
-    var dd = daysToExpGS_(exp);
-    if (dd === null) return;
-    var key = name + '|' + lot;
-    if (seen[key]) return;
-    seen[key] = true;
-    var row = { name: name, lot: lot || '—', exp: fmtD_(exp), days: dd, qty: (Number(qty) || 0), unit: unitByName[name] || '' };
-    if (dd < 0) expired.push(row);
-    else if (dd <= 90) soon.push(row);
-  }
+  // ทะเบียนล็อตที่ยังมีของ จัดกลุ่มตามรหัสพัสดุ
+  var byCode = {};
   getLots().lots.forEach(function (L) {
     if ((Number(L.qty) || 0) <= 0) return;
-    consider(L.name || L.code, L.lot, L.exp, L.qty);
+    var k = String(L.code).trim();
+    (byCode[k] = byCode[k] || []).push(L);
   });
+  var expired = [], soon = [];
   items.forEach(function (i) {
-    if ((Number(i.cur) || 0) <= 0) return;
-    consider(i.name, i.lot, i.exp, i.cur);
+    var registered = byCode[String(i.code).trim()];
+    var ls = (registered && registered.length) ? registered
+      : (((Number(i.cur) || 0) > 0) ? [{ lot: i.lot, exp: i.exp, qty: i.cur }] : []);
+    // ล็อตที่ใกล้หมดอายุสุด (เหมือน soonestExpLot ฝั่งเว็บ)
+    var best = null, bestD = null;
+    ls.forEach(function (L) {
+      var dd = daysToExpGS_(L.exp);
+      if (dd === null) return;
+      if (bestD === null || dd < bestD) { bestD = dd; best = L; }
+    });
+    if (!best) return;
+    var row = { name: i.name, lot: best.lot || '—', exp: fmtD_(best.exp), days: bestD, qty: (Number(best.qty) || 0), unit: i.unit || '' };
+    if (bestD < 0) expired.push(row);
+    else if (bestD <= 90) soon.push(row);
   });
   expired.sort(function (a, b) { return a.days - b.days; });
   soon.sort(function (a, b) { return a.days - b.days; });
