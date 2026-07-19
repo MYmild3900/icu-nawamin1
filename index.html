@@ -439,6 +439,7 @@ body.role-user [onclick^="openAddStaff"]{display:none !important}
     <div class="ni" onclick="go('stock',this)">📦 คลังพัสดุ</div>
     <div class="ni" onclick="go('recv',this)">📥 รับพัสดุเข้า</div>
     <div class="ni" onclick="go('wd',this)">📤 เบิกพัสดุออก</div>
+    <div class="ni" onclick="go('shift',this)">🌙 นับท้ายเวร</div>
   </div>
   <div class="ns">
     <div class="nl">ข้อมูล</div>
@@ -2458,6 +2459,28 @@ body.role-user [onclick^="openAddStaff"]{display:none !important}
     </div>
   </div>
 
+  <!-- SHIFT COUNT (นับท้ายเวร) -->
+  <div id="pg-shift" class="pg">
+    <div class="ps">นับของท้ายเวร 5 นาที — ระบบบันทึก "ใช้ไป" ให้อัตโนมัติ ไม่ต้องบันทึกทีละครั้งระหว่างเวร</div>
+    <div class="fc">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button id="shift-mode-btn" class="btn sm" onclick="toggleShiftSetup()">⚙️ เลือกรายการที่นับ</button>
+        <span id="shift-hint" style="font-size:11px;color:var(--g4)"></span>
+      </div>
+      <div id="shift-setup" style="display:none;margin-bottom:12px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <select id="shift-cat" onchange="renderShiftSetup()" style="border:1px solid var(--g2);border-radius:var(--r8);padding:7px 10px;font-size:13px;font-family:inherit"></select>
+          <span style="font-size:11px;color:var(--g4)">แตะ ☆ เพื่อเพิ่มเข้ารายการนับประจำ</span>
+        </div>
+        <div id="shift-setup-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px"></div>
+      </div>
+      <div id="shift-count-list"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button class="btn wn" onclick="saveShiftCount()">🌙 บันทึกนับท้ายเวร</button>
+      </div>
+    </div>
+  </div>
+
   <!-- DATA HEALTH -->
   <div id="pg-health" class="pg">
     <div class="ps">ตรวจความสอดคล้องของข้อมูลทั้งระบบ — คงเหลือ vs ทะเบียนล็อต</div>
@@ -2804,7 +2827,7 @@ function applyRolePermissions(){
 document.getElementById('upw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
 function doLogout(){if(confirm('ต้องการออกจากระบบ?')){document.getElementById('app').style.display='none';document.getElementById('login').style.display='flex';document.getElementById('usel').value='';document.getElementById('upw').value=''}}
 
-const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',hist:'ประวัติรายการ',rpt:'รายงาน',req:'สรุปเบิกรายเดือน',count:'นับสต็อก / ปรับยอด',sc:'Stock Card',qr:'สแกน QR Code',health:'ตรวจสุขภาพข้อมูล',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
+const ttls={dash:'แดชบอร์ด',stock:'คลังพัสดุ',recv:'รับพัสดุเข้า',wd:'เบิกพัสดุออก',shift:'นับท้ายเวร',hist:'ประวัติรายการ',rpt:'รายงาน',req:'สรุปเบิกรายเดือน',count:'นับสต็อก / ปรับยอด',sc:'Stock Card',qr:'สแกน QR Code',health:'ตรวจสุขภาพข้อมูล',cfg:'ตั้งค่าระบบ',help:'วิธีใช้'};
 function go(id,el){
   if(typeof isAdmin==='function' && !isAdmin() && typeof ADMIN_PAGES!=='undefined' && ADMIN_PAGES.indexOf(id)>-1){
     alert('🔒 ส่วนนี้สำหรับผู้ดูแลระบบ (Admin) เท่านั้นค่ะ');
@@ -2823,6 +2846,7 @@ function go(id,el){
   if(id==='count') setTimeout(renderCountPage,50);
   if(id==='cfg') setTimeout(renderStaffTable,50);
   if(id==='health') setTimeout(renderHealth,50);
+  if(id==='shift') setTimeout(renderShiftPage,50);
   if(id==='dash') setTimeout(function(){ updateDashStats(); updateDashLists(); },50);
 }
 function doQS(v){   var el=document.getElementById('qres');if(!el)return;   v=(v||'').trim();   if(v.length===0){el.innerHTML='';el.style.display='none';return;}   else{     var q=v.toLowerCase();     var res=ITEMS.filter(function(i){return i.name.toLowerCase().includes(q)||(i.code||'').toLowerCase().includes(q);});     renderQRes(res.slice(0,6));   }   el.style.display='block'; } function getDefaultQSItems(){   return ITEMS.slice().sort(function(a,b){var o={rd:0,pk:1,wn:2,ok:3};return(o[a.status]||3)-(o[b.status]||3);}).slice(0,3); } function renderQRes(items){   var el=document.getElementById('qres');if(!el)return;   if(!items||items.length===0){el.innerHTML='<div style="padding:12px;text-align:center;color:var(--g4);font-size:12px">ไม่พบพัสดุค่ะ</div>';return;}   el.innerHTML=items.map(function(item){     var stsCls=item.status==='rd'?'sr':item.status==='pk'?'sp':item.status==='wn'?'sw2':'so';     var stsLbl=item.status==='rd'?'หมดแล้ว 🚫':item.status==='pk'?'หมดอายุ 😱':item.status==='wn'?'ใกล้หมด ⚠️':'ปกติ ✅';     return '<div class="qsi2" onclick="pickDashItem(\''+item.code+'\')" style="cursor:pointer">'       +'<div class="qi">📦</div>'       +'<div style="flex:1"><div style="font-weight:600;color:var(--nv);font-size:12px">'+item.name+'</div>'       +'<div style="font-size:10px;color:var(--g4)">'+item.code+' · '+(item.cat||'')+'</div></div>'       +'<span class="sts '+stsCls+'">'+stsLbl+' · '+(item.cur||0)+' '+item.unit+'</span>'       +'</div>';   }).join(''); } function pickDashItem(code){   var item=ITEMS.find(function(i){return i.code===code;});if(!item)return;   document.getElementById('qin').value=item.name;   showDashAC(item.name); }
@@ -6022,6 +6046,131 @@ function printReqSummary(){
 }
 
 // ── หน้านับสต็อก / ปรับยอด — เทียบยอดจริงกับระบบ แล้วปรับให้ตรง ──
+// ═══ หน้า "นับท้ายเวร" — นับของกลุ่มใช้ประจำรอบเดียวท้ายเวร ระบบบันทึกส่วนต่างเป็น "ใช้ไป" ให้เอง ═══
+var SHIFT_KEY = 'icu_shift_items_v1';
+function getShiftSet(){
+  try{ var a=JSON.parse(localStorage.getItem(SHIFT_KEY)); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+}
+function saveShiftSet(arr){ try{ localStorage.setItem(SHIFT_KEY, JSON.stringify(arr)); }catch(e){} }
+function toggleShiftItem(code){
+  var arr=getShiftSet(), i=arr.indexOf(String(code));
+  if(i===-1) arr.push(String(code)); else arr.splice(i,1);
+  saveShiftSet(arr);
+  renderShiftSetup(); renderShiftCountList();
+}
+function toggleShiftSetup(){
+  var el=document.getElementById('shift-setup');
+  var show = el.style.display==='none';
+  el.style.display = show?'block':'none';
+  document.getElementById('shift-mode-btn').textContent = show?'✅ เสร็จแล้ว — ปิดหน้าเลือก':'⚙️ เลือกรายการที่นับ';
+  if(show) renderShiftSetup();
+}
+function renderShiftSetup(){
+  var sel=document.getElementById('shift-cat');
+  if(sel && !sel.options.length){
+    var cats={}; ITEMS.forEach(function(i){ cats[i.cat]=1; });
+    Object.keys(cats).forEach(function(c){ var o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+  }
+  var cat = sel ? sel.value : '';
+  var box=document.getElementById('shift-setup-list');
+  if(!box) return;
+  var set=getShiftSet();
+  box.innerHTML = ITEMS.filter(function(i){ return i.cat===cat; }).map(function(i){
+    var on = set.indexOf(String(i.code))>-1;
+    return '<div onclick="toggleShiftItem(\''+escAttrJs(i.code)+'\')" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid '+(on?'var(--li)':'var(--g1)')+';border-radius:var(--r8);cursor:pointer;background:'+(on?'var(--bl)':'#fff')+'">'
+      +'<span style="font-size:16px">'+(on?'★':'☆')+'</span>'
+      +'<span style="flex:1;font-size:12px;'+(on?'font-weight:700;color:var(--nv)':'')+'">'+i.name+'</span>'
+      +'<span style="font-size:10px;color:var(--g4)">'+(i.cur||0)+' '+(i.unit||'')+'</span></div>';
+  }).join('') || '<div style="color:var(--g4);font-size:12px;padding:8px">ไม่มีพัสดุในหมวดนี้ค่ะ</div>';
+}
+function renderShiftPage(){ renderShiftCountList(); }
+function renderShiftCountList(){
+  var box=document.getElementById('shift-count-list');
+  var hint=document.getElementById('shift-hint');
+  if(!box) return;
+  var set=getShiftSet();
+  var items = ITEMS.filter(function(i){ return set.indexOf(String(i.code))>-1; });
+  if(hint) hint.textContent = items.length ? ('นับประจำ '+items.length+' รายการ · เว้นว่าง = ไม่เปลี่ยนแปลง') : '';
+  if(!items.length){
+    box.innerHTML='<div style="text-align:center;padding:30px;color:var(--g4);font-size:13px">ยังไม่ได้เลือกรายการที่นับประจำค่ะ<br>กด "⚙️ เลือกรายการที่นับ" แล้วติด ★ ให้ของที่ใช้บ่อย (แนะนำ 10–20 ตัว)</div>';
+    return;
+  }
+  box.innerHTML = items.map(function(i){
+    return '<div class="shift-row" data-code="'+escAttr(i.code)+'" style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--g1);border-radius:var(--r8);margin-bottom:6px;background:#fff">'
+      +'<div style="flex:1;min-width:0"><div style="font-weight:600;color:var(--nv);font-size:13px">'+i.name+'</div>'
+      +'<div style="font-size:10px;color:var(--g4)">ในระบบ: '+(i.cur||0)+' '+(i.unit||'')+((i.unitPack&&i.unitPack!=='—'&&i.unitPack!=='-')?' · 📦 '+i.unitPack:'')+'</div></div>'
+      +'<input type="number" min="0" class="shift-inp" placeholder="'+(i.cur||0)+'" inputmode="numeric"'
+      +' style="width:90px;padding:10px;border:1.5px solid var(--g2);border-radius:var(--r8);text-align:center;font-size:15px;font-weight:700;font-family:inherit">'
+      +'<div class="shift-use" style="width:86px;text-align:right;font-size:11px;color:var(--g4)">—</div></div>';
+  }).join('');
+  box.querySelectorAll('.shift-inp').forEach(function(inp){
+    inp.addEventListener('input', function(){
+      var row=inp.closest('.shift-row');
+      var item=ITEMS.find(function(i){ return String(i.code)===row.dataset.code; });
+      var cell=row.querySelector('.shift-use');
+      if(inp.value===''){ cell.textContent='—'; cell.style.color='var(--g4)'; return; }
+      var d=(parseFloat(inp.value)||0)-(parseFloat(item.cur)||0);
+      if(d<0){ cell.textContent='ใช้ไป '+(-d); cell.style.color='var(--rd-t)'; cell.style.fontWeight='700'; }
+      else if(d>0){ cell.textContent='เกิน +'+d; cell.style.color='var(--nv)'; cell.style.fontWeight='700'; }
+      else { cell.textContent='ตรง ✓'; cell.style.color='var(--ok-t)'; cell.style.fontWeight='700'; }
+    });
+  });
+}
+function saveShiftCount(){
+  var changes=[];
+  document.querySelectorAll('#shift-count-list .shift-row').forEach(function(row){
+    var inp=row.querySelector('.shift-inp');
+    if(!inp || inp.value==='') return;
+    var item=ITEMS.find(function(i){ return String(i.code)===row.dataset.code; });
+    if(!item) return;
+    var counted=Math.max(0,parseFloat(inp.value)||0);
+    var diff=counted-(parseFloat(item.cur)||0);
+    if(diff!==0) changes.push({item:item, counted:counted, diff:diff});
+  });
+  if(!changes.length){ alert('ยอดตรงกับระบบทุกรายการ ไม่มีอะไรต้องบันทึกค่ะ 🎉'); return; }
+  var lines=changes.map(function(c){ return '• '+c.item.name+': '+(c.diff<0?('ใช้ไป '+(-c.diff)):('พบเกิน +'+c.diff))+' → เหลือ '+c.counted; });
+  if(!confirm('บันทึกนับท้ายเวร '+changes.length+' รายการ:\n\n'+lines.slice(0,12).join('\n')
+    +(lines.length>12?'\n... (อีก '+(lines.length-12)+' รายการ)':'')+'\n\nของที่ลดลงจะบันทึกเป็น "เบิกออก (นับท้ายเวร)" ค่ะ')) return;
+
+  var now=new Date();
+  var user=document.getElementById('sbn').textContent||'พยาบาล';
+  var syncPromises=[];
+  changes.forEach(function(c){
+    var item=c.item;
+    var oldStock=parseFloat(item.cur)||0;
+    item.cur=c.counted;
+    if(c.diff<0){
+      // ใช้ไป → เบิกออก + ตัดล็อตตาม FEFO (ล็อตใกล้หมดอายุก่อน)
+      var usage=-c.diff, usedLots=[];
+      realLotsOf(item).forEach(function(L){
+        if(usage<=0) return;
+        var take=Math.min(parseFloat(L.qty)||0, usage);
+        if(take>0){
+          usedLots.push(L.lot+'×'+take);
+          syncPromises.push(syncOrQueue(GS_ITEMS_URL,{action:'deductLot',code:item.code,name:item.name,lot:L.lot,qty:take},'ตัดล็อต: '+item.name));
+          L.qty=(parseFloat(L.qty)||0)-take;
+          usage-=take;
+        }
+      });
+      item.lots=(item.lots||[]).filter(function(x){ return (parseFloat(x.qty)||0)>0 || x.lot==='—' || x.lot==='-'; });
+      var lotStr=usedLots.join(', ')||'—';
+      TXLOG.unshift({date:thaiDate(now),rawDate:now,type:'wd',name:item.name,code:item.code,lot:lotStr,qty:-c.diff,unit:item.unit,oldStock:oldStock,newStock:c.counted,user:user});
+      syncPromises.push(syncOrQueue(GS_HISTORY_URL,{date:thaiDate(now),type:'เบิกออก',code:item.code,name:item.name,qty:-c.diff,remaining:c.counted,lot:lotStr,user:user,note:'นับท้ายเวร'},'ประวัตินับท้ายเวร: '+item.name));
+    } else {
+      TXLOG.unshift({date:thaiDate(now),rawDate:now,type:'adj',name:item.name,code:item.code,lot:'—',qty:c.diff,unit:item.unit,oldStock:oldStock,newStock:c.counted,user:user});
+      syncPromises.push(syncOrQueue(GS_HISTORY_URL,{date:thaiDate(now),type:'ปรับยอด',code:item.code,name:item.name,qty:c.diff,remaining:c.counted,lot:'—',user:user,note:'นับท้ายเวร (พบเกิน)'},'ประวัตินับท้ายเวร: '+item.name));
+    }
+    syncPromises.push(syncOrQueue(GS_ITEMS_URL,{action:'updateStock',code:item.code,cur:c.counted},'ยอดคงเหลือ: '+item.name));
+  });
+  Promise.all(syncPromises).then(function(results){
+    var allOk=results.every(function(ok){ return ok; });
+    if(allOk){ alert('🌙 บันทึกนับท้ายเวร '+changes.length+' รายการเรียบร้อยค่ะ ขอบคุณค่ะ! 😊'); }
+    else { alert('🌙 บันทึกในแอปแล้ว '+changes.length+' รายการค่ะ\n📡 บางส่วนส่งขึ้น Google Sheets ไม่สำเร็จ — ระบบเก็บคิวไว้ส่งอัตโนมัติเมื่อเน็ตกลับมา ข้อมูลไม่หายค่ะ (อย่ากรอกซ้ำนะคะ)'); }
+  });
+  updateDashStats(); updateDashLists(); syncACLists(); syncStockTable(); filterStock();
+  renderShiftCountList(); renderHist();
+}
+
 // ═══ หน้า "ตรวจสุขภาพข้อมูล" — สแกนความไม่สอดคล้องทั้งระบบ (เฉพาะ Admin) ═══
 function levDist_(a,b){
   a=String(a); b=String(b);
