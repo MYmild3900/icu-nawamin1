@@ -3209,7 +3209,7 @@ function addRrow(){
   if(typeof ITEMS !== 'undefined'){
     ITEMS.forEach(function(item){
       var sc=item.cur<=0?'var(--rd-t)':item.cur<=item.min?'var(--wn-t)':'var(--ok-t)';
-      acHtml += '<div class="ac-item" data-code="'+item.code+'" data-name="'+item.name+'" data-cur="'+item.cur+'" data-unit="'+item.unit+'" onclick="selectRecvFromAC(this)">'
+      acHtml += '<div class="ac-item" data-code="'+escAttr(item.code)+'" data-name="'+escAttr(item.name)+'" data-cur="'+item.cur+'" data-unit="'+escAttr(item.unit)+'" onclick="selectRecvFromAC(this)">'
         +'<span style="font-size:16px">'+item.icon+'</span>'
         +'<div><div class="ac-name">'+item.name+'</div><div class="ac-sub">'+item.code+'</div></div>'
         +'<span class="ac-stock" style="color:'+sc+'">'+item.cur+' '+item.unit+'</span>'
@@ -4098,7 +4098,7 @@ function renderHist(){
   let filtered = TXLOG.filter(tx => {
     const mineOk   = !meName || String(tx.user||'').indexOf(meName) > -1;
     const typeOk   = typeF === 'all' || tx.type === typeF;
-    const searchOk = !searchF || tx.name.toLowerCase().includes(searchF) || tx.code.toLowerCase().includes(searchF);
+    const searchOk = !searchF || String(tx.name||'').toLowerCase().includes(searchF) || String(tx.code||'').toLowerCase().includes(searchF);
     let dateOk = true;
     if (fromD || toD) {
       const d = tx.rawDate ? new Date(tx.rawDate) : null;
@@ -4967,8 +4967,8 @@ function saveNewItem(){
       '<td style="font-size:11px">'+exp+'</td>'+
       '<td><span class="sts '+stsCls+'">'+stsLbl+'</span></td>'+
       '<td>'+
-      '<button class="btn sm" onclick="openEdit(\''+code+'\',\''+name+'\')">✏️</button> '+
-      '<button class="btn sm" onclick="showQRCode(\''+code+'\',\''+name+'\')">⬜ QR</button>'+
+      '<button class="btn sm" onclick="openEdit(\''+escAttrJs(code)+'\',\''+escAttrJs(name)+'\')">✏️</button> '+
+      '<button class="btn sm" onclick="showQRCode(\''+escAttrJs(code)+'\',\''+escAttrJs(name)+'\')">⬜ QR</button>'+
       '</td>';
     tbody.appendChild(tr);
   }
@@ -5215,8 +5215,9 @@ function showHistAC(input){
   // build from ITEMS
   if(list.children.length===0 && typeof ITEMS!=='undefined'){
     // ใช้ mousedown (ไม่ใช่ click) — click เกิดหลัง blur ของช่องค้นหา ลิสต์ถูกซ่อนก่อน ทำให้กดเลือกไม่ติด
+    // ส่งชื่อผ่าน data-name — กันชื่อที่มีเครื่องหมาย " ทำ attribute พัง
     list.innerHTML = ITEMS.map(function(item){
-      return '<div class="ac-item" onmousedown="event.preventDefault();selectHistItem(this,&quot;'+item.name+'&quot;)">'
+      return '<div class="ac-item" data-name="'+escAttr(item.name)+'" onmousedown="event.preventDefault();selectHistItem(this,this.dataset.name)">'
         +'<span style="font-size:15px">'+item.icon+'</span>'
         +'<div><div class="ac-name">'+item.name+'</div><div class="ac-sub">'+item.code+'</div></div>'
         +'</div>';
@@ -5278,6 +5279,14 @@ function fmtExp(exp){
   var d = parseExpDate(exp);
   if(!d || isNaN(d)){ var s=String(exp).trim(); return (s && s!=='—' && s!=='-') ? s : '—'; }
   return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+(d.getFullYear()+543);
+}
+// escape ข้อความก่อนฝังลง HTML attribute — กันชื่อที่มีเครื่องหมาย " (เช่น Micropore 1/2") ทำ attribute พัง
+function escAttr(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+// escape สำหรับสตริง JS ที่อยู่ใน onclick="fn('...')" — กันทั้ง HTML attribute และ JS string พัง
+function escAttrJs(s){
+  return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
 // หาล็อตที่ใกล้หมดอายุสุด (ที่ยังมีของ) ของพัสดุแต่ละตัว
 function soonestExpLot(item){
@@ -5697,7 +5706,7 @@ function lotMiniHTML(item) {
 function renderStockTable() {
   var tbody = document.getElementById('stock-tbody');
   if (!tbody) return;
-  function esc(s){ return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+  function esc(s){ return escAttrJs(s); }   // ต้องกันเครื่องหมาย " ในชื่อ (เช่น Micropore 1/2") ด้วย
   tbody.innerHTML = ITEMS.map(function(item) {
     var cur=item.cur||0, mn=item.min||0, mx=item.max||0;
     var sts = cur<=0?'rd':cur<=mn?'wn':'ok';
