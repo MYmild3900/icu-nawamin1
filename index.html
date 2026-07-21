@@ -6532,6 +6532,18 @@ function saveStockCount(){
       }
       if(rrow && fillRowVia(rrow, function(d){ selectRecvItem(d, item.name, item.code, item.cur, item.unit); })) return;
     }
+    // อยู่หน้า Stock Card → แสดงการ์ดของพัสดุที่สแกน
+    var pgSc = document.getElementById('pg-sc');
+    if(pgSc && pgSc.classList.contains('on') && typeof loadSC==='function'){ loadSC(item.code); return; }
+    // อยู่หน้าสแกน QR → แสดงรายละเอียดพัสดุ
+    var pgQr = document.getElementById('pg-qr');
+    if(pgQr && pgQr.classList.contains('on') && typeof renderQRResult==='function'){ renderQRResult(item); return; }
+    // อยู่หน้านับท้ายเวร → โฟกัสช่องกรอกของรายการที่สแกน (ถ้าอยู่ในรายการนับ)
+    var pgShift = document.getElementById('pg-shift');
+    if(pgShift && pgShift.classList.contains('on')){
+      var srow = pgShift.querySelector('.shift-row[data-code="'+String(item.code).replace(/"/g,'&quot;')+'"]');
+      if(srow){ var si=srow.querySelector('.shift-inp'); if(si){ si.focus(); si.select && si.select(); srow.scrollIntoView({block:'center'}); } return; }
+    }
     // หน้าอื่น → ไปหน้าคลังพัสดุแล้วแสดงรายการนั้น
     var ni = document.querySelector(".ni[onclick*=\"go('stock'\"]");
     go('stock', ni);
