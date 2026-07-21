@@ -6544,6 +6544,23 @@ function saveStockCount(){
       var srow = pgShift.querySelector('.shift-row[data-code="'+String(item.code).replace(/"/g,'&quot;')+'"]');
       if(srow){ var si=srow.querySelector('.shift-inp'); if(si){ si.focus(); si.select && si.select(); srow.scrollIntoView({block:'center'}); } return; }
     }
+    // อยู่หน้านับสต็อก → เลือกหมวดของพัสดุนั้น แล้วโฟกัสช่องกรอกของแถวนั้น
+    var pgCount = document.getElementById('pg-count');
+    if(pgCount && pgCount.classList.contains('on')){
+      var csel = document.getElementById('count-cat');
+      if(csel && csel.value!==item.cat){ csel.value=item.cat; renderCountTable(); }
+      var crow = pgCount.querySelector('#count-tbody tr[data-code="'+String(item.code).replace(/"/g,'&quot;')+'"]');
+      if(crow){ var ci=crow.querySelector('.cnt-inp')||crow.querySelector('.cnt-lot'); if(ci){ ci.focus(); ci.select && ci.select(); crow.scrollIntoView({block:'center'}); } }
+      return;
+    }
+    // อยู่หน้าประวัติ → กรองประวัติของพัสดุที่สแกน
+    var pgHist = document.getElementById('pg-hist');
+    if(pgHist && pgHist.classList.contains('on')){
+      var hs = document.getElementById('hist-search');
+      if(hs){ hs.value = item.name; }
+      if(typeof renderHist==='function') renderHist();
+      return;
+    }
     // หน้าอื่น → ไปหน้าคลังพัสดุแล้วแสดงรายการนั้น
     var ni = document.querySelector(".ni[onclick*=\"go('stock'\"]");
     go('stock', ni);
