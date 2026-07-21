@@ -6219,17 +6219,20 @@ function renderHealth(){
     (regByCode[c] = regByCode[c] || []).push({ lot:String(lr.lot||'').trim(), qty:parseFloat(lr.qty)||0 });
   });
 
+  var isBlankLot=function(n){ return !n || n==='—' || n==='-'; };
   var overs=[], opens=[], dupRows=[], similar=[], sci=[], dupCodes=window.DUP_CODES||[];
   ITEMS.forEach(function(item){
     var reg = regByCode[String(item.code).trim()];
-    if(reg && reg.length){
-      var lotSum = reg.reduce(function(s,L){ return s+L.qty; },0);
+    // นับเฉพาะแถวที่ "มีชื่อล็อตจริง" — แถวล็อต "—" ถือเป็นของไม่ระบุล็อต ไม่ใช่ล็อต
+    var realReg = (reg||[]).filter(function(L){ return !isBlankLot(L.lot); });
+    if(realReg.length){
+      var lotSum = realReg.reduce(function(s,L){ return s+L.qty; },0);
       var cur = parseFloat(item.cur)||0;
       if(lotSum > cur) overs.push({item:item, lotSum:lotSum});
-      else if(lotSum < cur) opens.push({item:item, lotSum:lotSum});
+      else if(lotSum < cur) opens.push({item:item, lotSum:lotSum});   // มีล็อตจริงบางส่วน + ไม่ระบุล็อตบางส่วน
       // แถวซ้ำชื่อเดียวกัน
       var byName={};
-      reg.forEach(function(L){ byName[L.lot]=(byName[L.lot]||0)+1; });
+      realReg.forEach(function(L){ byName[L.lot]=(byName[L.lot]||0)+1; });
       Object.keys(byName).forEach(function(n){ if(byName[n]>1) dupRows.push({item:item, lot:n, count:byName[n]}); });
       // ชื่อคล้ายกัน (ต่างกัน 1 ตัวอักษร)
       var names=Object.keys(byName);
@@ -6237,7 +6240,7 @@ function renderHealth(){
         if(names[i] && names[j] && levDist_(names[i],names[j])<=1) similar.push({item:item, a:names[i], b:names[j]});
       }
       // ล็อตโดนแปลงเป็นเลขวิทยาศาสตร์
-      reg.forEach(function(L){ if(/^\d+(\.\d+)?e\+\d+$/i.test(L.lot)) sci.push({item:item, lot:L.lot}); });
+      realReg.forEach(function(L){ if(/^\d+(\.\d+)?e\+\d+$/i.test(L.lot)) sci.push({item:item, lot:L.lot}); });
     }
   });
 
