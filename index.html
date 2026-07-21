@@ -6099,6 +6099,7 @@ function renderShiftCountList(){
     return '<div class="shift-row" data-code="'+escAttr(i.code)+'" style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--g1);border-radius:var(--r8);margin-bottom:6px;background:#fff">'
       +'<div style="flex:1;min-width:0"><div style="font-weight:600;color:var(--nv);font-size:13px">'+i.name+'</div>'
       +'<div style="font-size:10px;color:var(--g4)">ในระบบ: '+(i.cur||0)+' '+(i.unit||'')+((i.unitPack&&i.unitPack!=='—'&&i.unitPack!=='-')?' · 📦 '+i.unitPack:'')+'</div></div>'
+      + boxEntryHTML(packQty(i))
       +'<input type="number" min="0" class="shift-inp" placeholder="'+(i.cur||0)+'" inputmode="numeric"'
       +' style="width:90px;padding:10px;border:1.5px solid var(--g2);border-radius:var(--r8);text-align:center;font-size:15px;font-weight:700;font-family:inherit">'
       +'<div class="shift-use" style="width:86px;text-align:right;font-size:11px;color:var(--g4)">—</div></div>';
@@ -6108,13 +6109,14 @@ function renderShiftCountList(){
       var row=inp.closest('.shift-row');
       var item=ITEMS.find(function(i){ return String(i.code)===row.dataset.code; });
       var cell=row.querySelector('.shift-use');
-      if(inp.value===''){ cell.textContent='—'; cell.style.color='var(--g4)'; return; }
+      if(inp.value===''){ cell.textContent='—'; cell.style.color='var(--g4)'; cell.style.fontWeight='400'; return; }
       var d=(parseFloat(inp.value)||0)-(parseFloat(item.cur)||0);
       if(d<0){ cell.textContent='ใช้ไป '+(-d); cell.style.color='var(--rd-t)'; cell.style.fontWeight='700'; }
       else if(d>0){ cell.textContent='เกิน +'+d; cell.style.color='var(--nv)'; cell.style.fontWeight='700'; }
       else { cell.textContent='ตรง ✓'; cell.style.color='var(--ok-t)'; cell.style.fontWeight='700'; }
     });
   });
+  wireBoxEntries(box);
 }
 function saveShiftCount(){
   var changes=[];
@@ -6309,6 +6311,33 @@ function renderCountPage(){
 function realLotsOf(item){
   return (item.lots||[]).filter(function(L){ return L.lot && L.lot!=='—' && L.lot!=='-'; });
 }
+// อ่าน "จำนวนชิ้นต่อกล่อง" จากช่องหน่วยบรรจุ เช่น "10 ชิ้น/กล่อง", "1กล่อง/30ชิ้น" → 10, 30
+function packQty(item){
+  var m = String(item && item.unitPack || '').match(/(\d+)\s*ชิ/);
+  return m ? (parseInt(m[1],10)||0) : 0;
+}
+// ช่องกรอก "กล่อง" (แสดงเฉพาะพัสดุที่ตั้งจำนวนต่อกล่องไว้) — คูณเป็นชิ้นให้อัตโนมัติ
+function boxEntryHTML(pq){
+  if(!pq) return '';
+  return '<div style="display:flex;align-items:center;gap:3px;margin-right:6px" title="กรอกเป็นจำนวนกล่อง ระบบคูณเป็นชิ้นให้">'
+    + '<input type="number" min="0" class="box-entry" data-pack="'+pq+'" placeholder="กล่อง" inputmode="numeric"'
+    + ' style="width:58px;padding:8px;border:1.5px dashed var(--li);border-radius:var(--r8);text-align:center;font-family:inherit">'
+    + '<span style="font-size:10px;color:var(--g4)">×'+pq+'</span></div>';
+}
+// ผูกช่อง "กล่อง" → เติมช่องชิ้นในแถวเดียวกัน แล้วยิง event ให้คำนวณส่วนต่างต่อ
+function wireBoxEntries(scope){
+  (scope||document).querySelectorAll('.box-entry').forEach(function(be){
+    be.addEventListener('input', function(){
+      var row = be.closest('.shift-row') || be.closest('tr');
+      if(!row) return;
+      var piece = row.querySelector('.shift-inp') || row.querySelector('.cnt-inp');
+      if(!piece) return;
+      var pk = parseInt(be.dataset.pack,10)||1;
+      piece.value = (be.value==='') ? '' : String((parseFloat(be.value)||0)*pk);
+      piece.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+  });
+}
 function renderCountTable(){
   var cat = (document.getElementById('count-cat')||{}).value || '';
   var tb  = document.getElementById('count-tbody');
@@ -6335,7 +6364,9 @@ function renderCountTable(){
           + ' style="width:74px;padding:5px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></div>';
       }
     } else {
-      inputCell = '<input type="number" min="0" class="cnt-inp" data-code="'+i.code+'" placeholder="'+(i.cur||0)+'" style="width:84px;padding:6px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit">';
+      inputCell = '<div style="display:flex;align-items:center;justify-content:flex-end">'
+        + boxEntryHTML(packQty(i))
+        + '<input type="number" min="0" class="cnt-inp" data-code="'+i.code+'" placeholder="'+(i.cur||0)+'" style="width:84px;padding:6px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></div>';
     }
     return '<tr data-code="'+i.code+'"><td><span class="cb">'+i.code+'</span></td><td>'+i.name+'</td><td>'+(i.unit||'')+'</td>'
       + '<td style="text-align:center;font-weight:700">'+(i.cur||0)+'</td>'
@@ -6357,6 +6388,7 @@ function renderCountTable(){
   tb.querySelectorAll('.cnt-inp, .cnt-lot').forEach(function(inp){
     inp.addEventListener('input', function(){ updDiff(inp); });
   });
+  wireBoxEntries(tb);
 }
 // ยอดนับรวมของแถว: ช่องที่เว้นว่าง = ใช้ยอดเดิมของล็อตนั้น · คืน null ถ้าไม่ได้กรอกอะไรเลย
 function countedTotalFor(item, tr){
