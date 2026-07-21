@@ -3814,9 +3814,9 @@ function saveWd(){
       user
     });
     syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: thaiDate(now), type: 'เบิกออก', code, name, qty, remaining: newStock, lot, user, note: '' }, 'ประวัติเบิก: '+name));
-    // อัปเดตยอดคงเหลือในแถวเดิมของชีตหมวด (ไม่แทรกแถว)
+    // อัปเดตยอดคงเหลือแบบ "ส่วนต่าง" (หักออก qty จากยอดจริงในเซิร์ฟเวอร์) — กันหลายคนเบิกพร้อมกันแล้วเขียนทับกัน
     if (item && item.code && item.code !== '—') {
-      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'updateStock', code: item.code, cur: newStock }, 'ยอดคงเหลือ: '+item.name));
+      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'adjustStock', code: item.code, delta: -qty }, 'ยอดคงเหลือ: '+item.name));
       // ตัดยอด lot ที่เลือกในทะเบียน lot (tab Lot)
       syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'deductLot', code: item.code, name: item.name, lot: lot, qty: qty }, 'ตัดล็อต: '+item.name));
       var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
@@ -3914,9 +3914,9 @@ function saveWd(){
     if (item) item.cur = newStock;
     TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'recv', name, code, lot, qty, unit, oldStock, newStock, user });
     syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: recvDateTh, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' }, 'ประวัติรับเข้า: '+name));
-    // อัปเดตยอดคงเหลือในแถวเดิมของชีตหมวด (ไม่แทรกแถว)
+    // อัปเดตยอดคงเหลือแบบ "ส่วนต่าง" (บวกเข้า qty กับยอดจริงในเซิร์ฟเวอร์) — กันหลายคนทำพร้อมกันแล้วเขียนทับกัน
     if (item && item.code && item.code !== '—') {
-      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'updateStock', code: item.code, cur: newStock }, 'ยอดคงเหลือ: '+item.name));
+      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'adjustStock', code: item.code, delta: qty }, 'ยอดคงเหลือ: '+item.name));
       // เพิ่ม/บวกยอด lot ในทะเบียน lot (tab Lot — แถวใหม่เกิดเฉพาะใน tab นี้)
       syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'upsertLot', code: item.code, name: name, lot: lot, qty: qty, recv: recvDateTh, exp: exp || '' }, 'เพิ่มล็อต: '+name));
       var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
@@ -5671,6 +5671,25 @@ window.addEventListener('online', function(){ flushOutbox(); });
 setInterval(function(){ if(outboxCount() > 0 && navigator.onLine !== false) flushOutbox(); }, 25000);
 window.addEventListener('beforeunload', function(e){ if(outboxCount() > 0){ e.preventDefault(); e.returnValue=''; return ''; } });
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ updateOutboxBadge(); flushOutbox(); }, 1500); });
+
+// ── ดึงยอดล่าสุดเป็นระยะ (กันข้อมูลค้างเมื่อหลายคนใช้พร้อมกัน) ──
+// เว้นตอนกำลังกรอกฟอร์ม/เปิดกล่องโต้ตอบ เพื่อไม่ให้รบกวนการทำงาน
+function safeToRefresh(){
+  if(document.getElementById('login') && document.getElementById('login').style.display!=='none') return false; // ยังไม่ล็อกอิน
+  if(document.querySelector('.mbg.show')) return false;            // มีกล่องโต้ตอบเปิดอยู่
+  var pg = document.querySelector('.pg.on');
+  var busy = ['pg-recv','pg-wd','pg-count','pg-shift'];            // หน้าที่กำลังกรอกข้อมูล — ห้ามรีเฟรชทับ
+  if(pg && busy.indexOf(pg.id)>-1) return false;
+  if(typeof outboxCount==='function' && outboxCount()>0) return false; // ยังมีคิวค้างส่ง
+  return true;
+}
+function autoRefreshItems(){
+  if(safeToRefresh() && typeof loadFromSheets==='function') loadFromSheets();
+}
+setInterval(autoRefreshItems, 180000);                             // ทุก 3 นาที
+document.addEventListener('visibilitychange', function(){          // ตอนสลับกลับมาที่แอป
+  if(!document.hidden) setTimeout(autoRefreshItems, 400);
+});
 
 // ── ลงทะเบียน Service Worker (PWA) — ทำให้เปิดแอปได้แม้ไม่มีเน็ต ──
 if ('serviceWorker' in navigator) {

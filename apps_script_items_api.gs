@@ -53,6 +53,7 @@ function doPost(e) {
     else if (action === 'addLog')      result = addLog(data.log);
     else if (action === 'addItem')     result = addItem(data.item);
     else if (action === 'updateStock') result = updateStock(data.code, data.cur);
+    else if (action === 'adjustStock') result = adjustStock(data.code, data.delta);
     else if (action === 'upsertLot')   result = upsertLot(data);
     else if (action === 'deductLot')   result = deductLot(data);
     else if (action === 'saveStaff')   result = saveStaffList(data.staff);
@@ -89,6 +90,41 @@ function updateStock(code, cur) {
     }
   }
   return { error: 'Item not found: ' + codeStr };
+}
+
+// ── adjustStock: หัก/บวกยอดคงเหลือแบบ "ส่วนต่าง" (อ่านค่าปัจจุบันแล้วบวก delta) ──
+// ปลอดภัยเมื่อหลายคนเบิก/รับพร้อมกัน — ไม่เขียนทับกันเหมือน updateStock (ที่เซ็ตค่าทั้งก้อน)
+// LockService กันสองคำขอชนกันตอนอ่าน-เขียนพร้อมกัน (race condition)
+function adjustStock(code, delta) {
+  if (!code) return { error: 'ไม่มีรหัสพัสดุ' };
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { error: 'ระบบไม่ว่าง ลองใหม่อีกครั้งค่ะ' }; }
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheets = ss.getSheets();
+    var codeStr = code.toString().trim();
+    var d = Number(delta) || 0;
+    for (var s = 0; s < sheets.length; s++) {
+      var sh = sheets[s];
+      if (!isItemSheet(sh)) continue;
+      var lastRow = sh.getLastRow();
+      if (lastRow < 4) continue;
+      var colA = sh.getRange(4, 1, lastRow - 3, 1).getValues();
+      for (var i = 0; i < colA.length; i++) {
+        if ((colA[i][0] || '').toString().trim() === codeStr) {
+          var cell = sh.getRange(i + 4, 6);
+          var cur = Number(cell.getValue()) || 0;
+          var next = Math.max(0, cur + d);
+          cell.setValue(next);
+          SpreadsheetApp.flush();
+          return { ok: true, sheet: sh.getName(), row: i + 4, prev: cur, cur: next };
+        }
+      }
+    }
+    return { error: 'Item not found: ' + codeStr };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ── getItems: อ่านเฉพาะชีตหมวดพัสดุจริงเท่านั้น ──
