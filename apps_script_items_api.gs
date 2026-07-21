@@ -57,6 +57,8 @@ function doPost(e) {
     else if (action === 'deductLot')   result = deductLot(data);
     else if (action === 'saveStaff')   result = saveStaffList(data.staff);
     else if (action === 'updateUnitPack') result = updateUnitPack(data.code, data.unitPack);
+    else if (action === 'updateItemMeta') result = updateItemMeta(data.code, data);
+    else if (action === 'clearLots')   result = clearLots(data.code);
     else if (action === 'mergeLots')   result = mergeLots(data.code);
     else if (action === 'addLot')      result = { error: 'addLot ถูกปิดการใช้งานแล้ว — ใช้ upsertLot/deductLot แทน (ไม่แทรกแถวในชีตพัสดุ)' };
     else result = { error: 'Unknown action' };
@@ -218,6 +220,53 @@ function updateUnitPack(code, unitPack) {
     }
   }
   return { error: 'Item not found: ' + codeStr };
+}
+
+// ── updateItemMeta: แก้ ชื่อ/หน่วยนับ/Min/Max/ที่จัดเก็บ ในแถวเดิมของชีตหมวด ──
+// (คอลัมน์ B=ชื่อ, C=หน่วย, D=Min, E=Max, G=ที่จัดเก็บ) — ส่งเฉพาะช่องที่ต้องการแก้
+function updateItemMeta(code, d) {
+  if (!code) return { error: 'ไม่มีรหัสพัสดุ' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheets = ss.getSheets();
+  var codeStr = code.toString().trim();
+  for (var s = 0; s < sheets.length; s++) {
+    var sh = sheets[s];
+    if (!isItemSheet(sh)) continue;
+    var lastRow = sh.getLastRow();
+    if (lastRow < 4) continue;
+    var colA = sh.getRange(4, 1, lastRow - 3, 1).getValues();
+    for (var i = 0; i < colA.length; i++) {
+      if ((colA[i][0] || '').toString().trim() === codeStr) {
+        var r = i + 4;
+        if (d.name !== undefined && d.name !== null && d.name !== '') sh.getRange(r, 2).setValue(String(d.name));
+        if (d.unit !== undefined && d.unit !== null && d.unit !== '') sh.getRange(r, 3).setValue(String(d.unit));
+        if (d.min  !== undefined && d.min  !== null && d.min  !== '') sh.getRange(r, 4).setValue(Number(d.min) || 0);
+        if (d.max  !== undefined && d.max  !== null && d.max  !== '') sh.getRange(r, 5).setValue(Number(d.max) || 0);
+        if (d.loc  !== undefined && d.loc  !== null && d.loc  !== '') sh.getRange(r, 7).setValue(String(d.loc));
+        return { ok: true, sheet: sh.getName(), row: r };
+      }
+    }
+  }
+  return { error: 'Item not found: ' + codeStr };
+}
+
+// ── clearLots: ลบแถวทะเบียนล็อตทั้งหมดของพัสดุ (ใช้ตอนเปลี่ยนไปจัดการเป็นกล่อง ไม่ติดตามล็อตแล้ว) ──
+function clearLots(code) {
+  if (!code) return { error: 'ไม่มีรหัสพัสดุ' };
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('Lot');
+  if (!sheet) return { ok: true, deleted: 0 };
+  var last = sheet.getLastRow();
+  if (last < 2) return { ok: true, deleted: 0 };
+  var vals = sheet.getRange(2, 1, last - 1, 1).getValues();
+  var codeStr = String(code).trim();
+  var rowsToDel = [];
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]).trim() === codeStr) rowsToDel.push(i + 2);
+  }
+  rowsToDel.sort(function (a, b) { return b - a; });   // ลบจากล่างขึ้นบน
+  rowsToDel.forEach(function (r) { sheet.deleteRow(r); });
+  return { ok: true, deleted: rowsToDel.length };
 }
 
 // ▶ กดรันครั้งเดียวหลัง deploy: เปลี่ยนหัวคอลัมน์ K เป็น "หน่วยต่อกล่อง" ทุกชีตหมวด

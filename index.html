@@ -3178,13 +3178,18 @@ function saveEdit(){
     if(prevEl._imgData) item.imgData = prevEl._imgData;
     if(prevEl._icon)    item.icon    = prevEl._icon;
   }
-  var oldUpk = item.unitPack;
+  var oldUpk = item.unitPack, oldMeta = { name:item.name, unit:item.unit, min:item.min, max:item.max, loc:item.loc };
   item.name = name; item.cat = cat; item.unit = unit;
   item.min  = mn;   item.max = mx;  item.loc  = loc;
   item.unitPack = upk || '—';
+  var canSync = (typeof syncOrQueue==='function' && typeof GS_ITEMS_URL!=='undefined');
   // บันทึกหน่วยบรรจุลงชีตหมวด (คอลัมน์ K) เมื่อมีการเปลี่ยน
-  if(item.unitPack !== oldUpk && typeof syncOrQueue==='function' && typeof GS_ITEMS_URL!=='undefined'){
+  if(item.unitPack !== oldUpk && canSync){
     syncOrQueue(GS_ITEMS_URL, { action:'updateUnitPack', code:item.code, unitPack:item.unitPack }, 'หน่วยบรรจุ: '+item.name);
+  }
+  // บันทึก ชื่อ/หน่วยนับ/Min/Max/ที่จัดเก็บ ลงชีตหมวด เมื่อมีการเปลี่ยน (ต้อง deploy GAS เวอร์ชันล่าสุด)
+  if(canSync && (name!==oldMeta.name || unit!==oldMeta.unit || mn!==oldMeta.min || mx!==oldMeta.max || loc!==oldMeta.loc)){
+    syncOrQueue(GS_ITEMS_URL, { action:'updateItemMeta', code:item.code, name:name, unit:unit, min:mn, max:mx, loc:loc }, 'ข้อมูลพัสดุ: '+item.name);
   }
 
   // อัปเดตแถวในตาราง
@@ -6315,7 +6320,9 @@ function realLotsOf(item){
   return (item.lots||[]).filter(function(L){ return L.lot && L.lot!=='—' && L.lot!=='-'; });
 }
 // อ่าน "จำนวนชิ้นต่อกล่อง" จากช่องหน่วยบรรจุ เช่น "10 ชิ้น/กล่อง", "1กล่อง/30ชิ้น" → 10, 30
+// ถ้าหน่วยนับเป็น "กล่อง" อยู่แล้ว = นับเป็นกล่องตรง ๆ ไม่ต้องมีช่องแปลงกล่อง (คืน 0)
 function packQty(item){
+  if(item && String(item.unit||'').indexOf('กล่อง')>-1) return 0;
   var m = String(item && item.unitPack || '').match(/(\d+)\s*ชิ/);
   return m ? (parseInt(m[1],10)||0) : 0;
 }
