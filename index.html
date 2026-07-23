@@ -5606,6 +5606,10 @@ function outboxCount(){ return outboxLoad().length; }
 
 // ส่ง 1 คำขอ — สำเร็จคืน true; ล้มเหลวเก็บเข้าคิวแล้วคืน false (ไม่ทิ้งข้อมูล)
 function syncOrQueue(url, bodyObj, label){
+  // ใส่รหัสอ้างอิงไม่ซ้ำ (txId) ครั้งเดียว — ส่งซ้ำ/รีเพลย์คิวใช้ตัวเดิม เซิร์ฟเวอร์จะไม่หักยอดซ้ำ
+  if(bodyObj && typeof bodyObj==='object' && !bodyObj.txId){
+    bodyObj.txId = Date.now().toString(36) + Math.random().toString(36).slice(2,9);
+  }
   return fetch(url, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(bodyObj) })
     .then(function(r){ if(r.ok) return true; throw new Error('HTTP '+r.status); })
     .catch(function(){

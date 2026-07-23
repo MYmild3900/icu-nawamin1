@@ -53,7 +53,7 @@ function doPost(e) {
     else if (action === 'addLog')      result = addLog(data.log);
     else if (action === 'addItem')     result = addItem(data.item);
     else if (action === 'updateStock') result = updateStock(data.code, data.cur);
-    else if (action === 'adjustStock') result = adjustStock(data.code, data.delta);
+    else if (action === 'adjustStock') result = adjustStock(data.code, data.delta, data.txId);
     else if (action === 'upsertLot')   result = upsertLot(data);
     else if (action === 'deductLot')   result = deductLot(data);
     else if (action === 'saveStaff')   result = saveStaffList(data.staff);
@@ -69,6 +69,11 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }
+
+// ── กันทำรายการซ้ำ (idempotency) — จำ txId ที่เคยทำแล้ว 6 ชม. ผ่าน CacheService ──
+// ใช้กับคำสั่งแบบ "ส่วนต่าง" (adjustStock/deductLot/upsertLot) — ส่งซ้ำ/รีเพลย์คิวจะไม่หักยอดซ้ำ
+function txDone_(txId) { return txId ? !!CacheService.getScriptCache().get('tx_' + txId) : false; }
+function txMark_(txId) { if (txId) CacheService.getScriptCache().put('tx_' + txId, '1', 21600); }
 
 // ── updateStock: แก้ยอดคงเหลือ (คอลัมน์ F) ในแถวเดิมของชีตหมวด — ไม่แทรกแถวใหม่ ──
 function updateStock(code, cur) {
@@ -95,11 +100,12 @@ function updateStock(code, cur) {
 // ── adjustStock: หัก/บวกยอดคงเหลือแบบ "ส่วนต่าง" (อ่านค่าปัจจุบันแล้วบวก delta) ──
 // ปลอดภัยเมื่อหลายคนเบิก/รับพร้อมกัน — ไม่เขียนทับกันเหมือน updateStock (ที่เซ็ตค่าทั้งก้อน)
 // LockService กันสองคำขอชนกันตอนอ่าน-เขียนพร้อมกัน (race condition)
-function adjustStock(code, delta) {
+function adjustStock(code, delta, txId) {
   if (!code) return { error: 'ไม่มีรหัสพัสดุ' };
   var lock = LockService.getScriptLock();
   try { lock.waitLock(15000); } catch (e) { return { error: 'ระบบไม่ว่าง ลองใหม่อีกครั้งค่ะ' }; }
   try {
+    if (txDone_(txId)) return { ok: true, duplicate: true };   // ส่งซ้ำ — ไม่หักยอดอีก
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sheets = ss.getSheets();
     var codeStr = code.toString().trim();
@@ -117,6 +123,7 @@ function adjustStock(code, delta) {
           var next = Math.max(0, cur + d);
           cell.setValue(next);
           SpreadsheetApp.flush();
+          txMark_(txId);
           return { ok: true, sheet: sh.getName(), row: i + 4, prev: cur, cur: next };
         }
       }
@@ -435,38 +442,61 @@ function getLots() {
 }
 
 // รับเข้า: บวกยอด lot เดิม หรือเพิ่มแถว lot ใหม่ (เพิ่มเฉพาะใน tab Lot เท่านั้น)
+// มี Lock กันชน + กันทำซ้ำด้วย txId (ส่งซ้ำ/รีเพลย์คิวจะไม่บวกยอดล็อตซ้ำ)
 function upsertLot(data) {
   if (!data.code) return { error: 'ไม่มีรหัสพัสดุ' };
-  var sheet = getLotSheet_();
-  var lot = String(data.lot || '—').trim() || '—';
-  var row = findLotRow_(sheet, data.code, lot, data.name);
-  if (row === -1) {
-    sheet.appendRow([String(data.code), data.name || '', lot, Number(data.qty) || 0, data.recv || '', data.exp || '']);
-    // บังคับช่องล็อตเป็นข้อความ — กัน Sheets ตีความชื่อล็อตแบบ 25E21 เป็นเลขวิทยาศาสตร์ (2.5e+22)
-    var newRow = sheet.getLastRow();
-    sheet.getRange(newRow, 3).setNumberFormat('@').setValue(lot);
-    return { ok: true, created: true };
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { error: 'ระบบไม่ว่าง ลองใหม่อีกครั้งค่ะ' }; }
+  try {
+    if (txDone_(data.txId)) return { ok: true, duplicate: true };
+    var sheet = getLotSheet_();
+    var lot = String(data.lot || '—').trim() || '—';
+    var row = findLotRow_(sheet, data.code, lot, data.name);
+    var res;
+    if (row === -1) {
+      sheet.appendRow([String(data.code), data.name || '', lot, Number(data.qty) || 0, data.recv || '', data.exp || '']);
+      // บังคับช่องล็อตเป็นข้อความ — กัน Sheets ตีความชื่อล็อตแบบ 25E21 เป็นเลขวิทยาศาสตร์ (2.5e+22)
+      var newRow = sheet.getLastRow();
+      sheet.getRange(newRow, 3).setNumberFormat('@').setValue(lot);
+      res = { ok: true, created: true };
+    } else {
+      var cur = Number(sheet.getRange(row, 4).getValue()) || 0;
+      sheet.getRange(row, 4).setValue(cur + (Number(data.qty) || 0));
+      if (data.recv) sheet.getRange(row, 5).setValue(data.recv);
+      if (data.exp)  sheet.getRange(row, 6).setValue(data.exp);
+      res = { ok: true, row: row, qty: cur + (Number(data.qty) || 0) };
+    }
+    SpreadsheetApp.flush();
+    txMark_(data.txId);
+    return res;
+  } finally {
+    lock.releaseLock();
   }
-  var cur = Number(sheet.getRange(row, 4).getValue()) || 0;
-  sheet.getRange(row, 4).setValue(cur + (Number(data.qty) || 0));
-  if (data.recv) sheet.getRange(row, 5).setValue(data.recv);
-  if (data.exp)  sheet.getRange(row, 6).setValue(data.exp);
-  return { ok: true, row: row, qty: cur + (Number(data.qty) || 0) };
 }
 
 // เบิกออก: ตัดยอดของ lot ที่เลือก (ต่ำสุด 0) — lot ที่ไม่อยู่ในทะเบียนให้ข้าม ไม่ถือเป็น error
+// มี Lock กันชน + กันทำซ้ำด้วย txId (ส่งซ้ำ/รีเพลย์คิวจะไม่หักยอดล็อตซ้ำ)
 function deductLot(data) {
   if (!data.code) return { error: 'ไม่มีรหัสพัสดุ' };
-  var ss = SpreadsheetApp.openById(SHEET_ID);
-  var sheet = ss.getSheetByName('Lot');
-  if (!sheet) return { ok: true, skipped: true };
-  var lot = String(data.lot || '—').trim() || '—';
-  var row = findLotRow_(sheet, data.code, lot, data.name);
-  if (row === -1) return { ok: true, skipped: true };
-  var cur = Number(sheet.getRange(row, 4).getValue()) || 0;
-  var next = Math.max(0, cur - (Number(data.qty) || 0));
-  sheet.getRange(row, 4).setValue(next);
-  return { ok: true, row: row, qty: next };
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(15000); } catch (e) { return { error: 'ระบบไม่ว่าง ลองใหม่อีกครั้งค่ะ' }; }
+  try {
+    if (txDone_(data.txId)) return { ok: true, duplicate: true };
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Lot');
+    if (!sheet) return { ok: true, skipped: true };
+    var lot = String(data.lot || '—').trim() || '—';
+    var row = findLotRow_(sheet, data.code, lot, data.name);
+    if (row === -1) { txMark_(data.txId); return { ok: true, skipped: true }; }
+    var cur = Number(sheet.getRange(row, 4).getValue()) || 0;
+    var next = Math.max(0, cur - (Number(data.qty) || 0));
+    sheet.getRange(row, 4).setValue(next);
+    SpreadsheetApp.flush();
+    txMark_(data.txId);
+    return { ok: true, row: row, qty: next };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ═══ บุคลากร (tab "Staff") — รายชื่อผู้ใช้ระบบ ═══
