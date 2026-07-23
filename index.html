@@ -178,6 +178,7 @@ tr:hover td{background:var(--wh)}
 .sw2{background:var(--wn-b);color:var(--wn-t)}.sw2::before{background:var(--wn-d)}
 .sr{background:var(--rd-b);color:var(--rd-t)}.sr::before{background:var(--rd-d)}
 .sp{background:var(--pk-b);color:var(--pk-t)}.sp::before{background:var(--pk-d)}
+.sov{background:var(--bl);color:var(--nv)}.sov::before{background:var(--nv)}
 .ii{width:36px;height:36px;border-radius:var(--r4);background:var(--g0);
   display:flex;align-items:center;justify-content:center;font-size:22px;
   border:1px solid var(--g1)}
@@ -607,6 +608,7 @@ body.role-user [onclick^="openAddStaff"]{display:none !important}
           <option value="ok">🟢 ปกติ</option>
           <option value="wn">🟡 ใกล้หมด</option>
           <option value="rd">🔴 หมด</option>
+          <option value="over">🔵 เกิน Max</option>
           <option value="pk">🩷 หมดอายุ</option>
         </select>
         <!-- ⑤ เพิ่มพัสดุ (ไม่มี QR แล้ว) -->
@@ -3644,9 +3646,9 @@ function selectWdItem(el, code){
     curEl.dataset.stock = item.cur;
     curEl.dataset.unit  = item.unit;
     curEl.dataset.code  = item.code;
-    var sc = item.cur<=0?'rd':item.cur<=item.min?'wn':'ok';
-    curEl.style.background = sc==='ok'?'var(--ok-b)':sc==='wn'?'var(--wn-b)':'var(--rd-b)';
-    curEl.style.color      = sc==='ok'?'var(--ok-t)':sc==='wn'?'var(--wn-t)':'var(--rd-t)';
+    var sc = calcStatus(item.cur, item.min, item.max);
+    curEl.style.background = sc==='ok'?'var(--ok-b)':sc==='wn'?'var(--wn-b)':sc==='over'?'var(--bl)':'var(--rd-b)';
+    curEl.style.color      = statusColor(sc);
   }
 
   var qtyEl = container.querySelector('.wd-qty');
@@ -4408,9 +4410,9 @@ function fillItemToForm(item, mode){
       if(curEl){
         curEl.textContent = item.cur + ' ' + item.unit;
         curEl.dataset.stock = item.cur;
-        const sc = item.cur<=0?'rd':item.cur<=item.min?'wn':'ok';
-        curEl.style.background = sc==='ok'?'var(--ok-b)':sc==='wn'?'var(--wn-b)':'var(--rd-b)';
-        curEl.style.color      = sc==='ok'?'var(--ok-t)':sc==='wn'?'var(--wn-t)':'var(--rd-t)';
+        const sc = calcStatus(item.cur, item.min, item.max);
+        curEl.style.background = sc==='ok'?'var(--ok-b)':sc==='wn'?'var(--wn-b)':sc==='over'?'var(--bl)':'var(--rd-b)';
+        curEl.style.color      = statusColor(sc);
       }
       const lotEl = row.querySelector('.wd-lot-val');
       if(lotEl) lotEl.textContent = item.lot + ' (รับ ' + item.recv + ')';
@@ -4449,8 +4451,8 @@ function syncACLists(){
     const stockEl = el.querySelector('.ac-stock');
     if(stockEl){
       stockEl.textContent = item.cur + ' ' + item.unit;
-      const st = item.cur<=0?'rd':item.cur<=item.min?'wn':'ok';
-      stockEl.style.color = st==='ok'?'var(--ok-t)':st==='wn'?'var(--wn-t)':'var(--rd-t)';
+      const st = calcStatus(item.cur, item.min, item.max);
+      stockEl.style.color = statusColor(st);
     }
     // อัปเดต onclick ให้ใช้ค่าใหม่ (ต้องตรงกับ selectWdItem(el, code) ปัจจุบัน)
     if(el.getAttribute('onclick') && el.getAttribute('onclick').includes('selectWdItem')){
@@ -4960,7 +4962,7 @@ function saveNewItem(){
     return;
   }
 
-  var status = cur<=0?'rd':cur<=min?'wn':'ok';
+  var status = calcStatus(cur, min, max);
   var icons = {'สำนักงาน':'📄','งานบ้าน':'🧹','สิ่งพิมพ์':'🖨️','การแพทย์':'🩺','ไฟฟ้า':'🔋','วิทยาศาสตร์':'🔬','เวชภัณฑ์':'💊','อื่นๆ':'📦'};
   var icon = '📦';
   Object.keys(icons).forEach(function(k){ if(cat.includes(k)) icon=icons[k]; });
@@ -5105,11 +5107,11 @@ function syncStockTable(){
     if(!item) return;
 
     // คำนวณ status ใหม่
-    var newSts = item.cur<=0?'rd':item.cur<=item.min?'wn':'ok';
+    var newSts = calcStatus(item.cur, item.min, item.max);
     item.status = newSts;
     row.setAttribute('data-status', newSts);
 
-    var stsColor = newSts==='ok'?'var(--ok-t)':newSts==='wn'?'var(--wn-t)':newSts==='rd'?'var(--rd-t)':'var(--pk-t)';
+    var stsColor = statusColor(newSts);
 
     // col index (0=รูป, 1=รหัส, 2=ชื่อ, 3=หมวด, 4=หน่วย, 5=min, 6=max, 7=คงเหลือ, 8=ที่จัดเก็บ, 9=รับเข้าล่าสุด, 10=หมดอายุ, 11=สถานะ, 12=จัดการ)
     var cells = row.querySelectorAll('td');
@@ -5145,8 +5147,8 @@ function syncStockTable(){
     if(cells[11]){
       var badge = cells[11].querySelector('.sts');
       if(badge){
-        badge.className = 'sts '+(newSts==='ok'?'so':newSts==='wn'?'sw2':newSts==='rd'?'sr':'sp');
-        badge.textContent = newSts==='ok'?'ปกติ':newSts==='wn'?'ใกล้หมด':newSts==='rd'?'หมดแล้ว':'หมดอายุ';
+        badge.className = 'sts '+statusBadgeCls(newSts);
+        badge.textContent = statusLabel(newSts);
       }
     }
   });
@@ -5386,14 +5388,15 @@ function updateDashLists(){
   // Urgent list
   var urgentEl = document.getElementById('dash-urgent-list');
   if(urgentEl){
-    var urgent = ITEMS.filter(function(i){return i.status==='rd'||i.status==='pk'||i.cur<=i.min;});
+    var isOver=function(i){ var mx=parseFloat(i.max)||0; return mx>0 && (parseFloat(i.cur)||0)>mx; };
+    var urgent = ITEMS.filter(function(i){return i.status==='rd'||i.status==='pk'||i.cur<=i.min||isOver(i);});
     // เรียงตามลำดับความสำคัญของหมวดก่อน แล้วค่อยเรียงตามความรุนแรงในหมวดเดียวกัน
     var catPrio={'💉 9.Needle+Syringe':0,'🩺 4.การแพทย์':1,'🔬 7.วิทยาศาสตร์การแพทย์':2,'📋 1.สำนักงาน':3,'🧹 2.งานบ้าน':4,'🖨️ 3.สิ่งพิมพ์':5};
     urgent.sort(function(a,b){
       var ca=(catPrio[a.cat]!==undefined)?catPrio[a.cat]:9, cb=(catPrio[b.cat]!==undefined)?catPrio[b.cat]:9;
       if(ca!==cb) return ca-cb;
-      var order={rd:0,pk:1,wn:2,ok:3};
-      return (order[a.status]||3)-(order[b.status]||3);
+      var order={rd:0,pk:1,wn:2,over:3,ok:4};
+      return (order[a.status]||4)-(order[b.status]||4);
     });
     if(urgent.length===0){
       urgentEl.innerHTML='<div style="text-align:center;padding:20px;color:var(--g4);font-size:12px">🎉 ไม่มีพัสดุที่ต้องดำเนินการด่วนค่ะ</div>';
@@ -5402,6 +5405,7 @@ function updateDashLists(){
         var dot, lbl;
         if(item.status==='rd'){dot='var(--rd-t)';lbl='หมดแล้ว 🚫';}
         else if(item.status==='pk'){dot='var(--pk-t)';lbl='หมดอายุ 😱';}
+        else if(isOver(item) && (parseFloat(item.cur)||0)>(parseFloat(item.min)||0)){dot='var(--nv)';lbl='เกิน Max '+item.cur+'/'+item.max+' 🔵';}
         else {dot='var(--wn-t)';lbl='เหลือ '+item.cur+' '+item.unit+' ⚠️';}
         return '<div class="ai"><span class="ad" style="background:'+dot+'"></span>'
           +'<span style="flex:1;font-size:12px">'+item.name+'</span>'
@@ -5755,17 +5759,28 @@ function lotMiniHTML(item) {
 }
 
 // ── ฟังก์ชันช่วย: render ตารางคลังพัสดุจาก ITEMS ──
+// สถานะพัสดุกลาง: rd หมด · wn ใกล้หมด · over เกิน Max · ok ปกติ (ใช้ทั้งระบบ)
+function calcStatus(cur, min, max){
+  cur=parseFloat(cur)||0; min=parseFloat(min)||0; max=parseFloat(max)||0;
+  if(cur<=0) return 'rd';
+  if(cur<=min) return 'wn';
+  if(max>0 && cur>max) return 'over';
+  return 'ok';
+}
+function statusColor(s){ return s==='ok'?'var(--ok-t)':s==='wn'?'var(--wn-t)':s==='over'?'var(--nv)':s==='pk'?'var(--pk-t)':'var(--rd-t)'; }
+function statusLabel(s){ return s==='ok'?'ปกติ':s==='wn'?'ใกล้หมด':s==='over'?'เกิน Max':s==='pk'?'หมดอายุ':'หมดแล้ว'; }
+function statusBadgeCls(s){ return s==='ok'?'so':s==='wn'?'sw2':s==='over'?'sov':s==='pk'?'sp':'sr'; }
 function renderStockTable() {
   var tbody = document.getElementById('stock-tbody');
   if (!tbody) return;
   function esc(s){ return escAttrJs(s); }   // ต้องกันเครื่องหมาย " ในชื่อ (เช่น Micropore 1/2") ด้วย
   tbody.innerHTML = ITEMS.map(function(item) {
     var cur=item.cur||0, mn=item.min||0, mx=item.max||0;
-    var sts = cur<=0?'rd':cur<=mn?'wn':'ok';
+    var sts = calcStatus(cur, mn, mx);
     item.status=sts;
-    var sc  = sts==='ok'?'var(--ok-t)':sts==='wn'?'var(--wn-t)':'var(--rd-t)';
-    var scls= sts==='ok'?'so':sts==='wn'?'sw2':'sr';
-    var slb = sts==='ok'?'ปกติ':sts==='wn'?'ใกล้หมด':'หมดแล้ว';
+    var sc  = statusColor(sts);
+    var scls= statusBadgeCls(sts);
+    var slb = statusLabel(sts);
     var img = item.imgData||item.imgUrl||'';
     var ist = img
       ? 'width:36px;height:36px;border-radius:6px;background-image:url('+img+');background-size:cover;background-position:center;display:inline-block;font-size:0'
@@ -5840,7 +5855,7 @@ function loadFromSheets() {
           var recv   = g('recv','วันรับ','วันที่รับ') || '—';
           var exp    = g('exp','วันหมดอายุ','exp date') || '—';
           var imgUrl = g('imgurl','img_url','รูป','รูปภาพ','🖼️ url รูปภาพ (วาง link รูปจากอินเทอร์เน็ต)');
-          var sts    = cur<=0?'rd':cur<=min?'wn':'ok';
+          var sts    = calcStatus(cur, min, max);
           return {
             code:code, name:name, cat:cat, icon:icon,
             unit:unit, unitPack:unitPk,

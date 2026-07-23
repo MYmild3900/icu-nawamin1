@@ -593,6 +593,10 @@ function buildDigestData_() {
     var c = Number(i.cur) || 0, m = Number(i.min) || 0;
     return c > 0 && m > 0 && c <= m;
   });
+  var over = items.filter(function (i) {
+    var c = Number(i.cur) || 0, mx = Number(i.max) || 0;
+    return mx > 0 && c > mx;
+  });
   // ทะเบียนล็อตที่ยังมีของ จัดกลุ่มตามรหัสพัสดุ
   var byCode = {};
   getLots().lots.forEach(function (L) {
@@ -619,7 +623,7 @@ function buildDigestData_() {
   });
   expired.sort(function (a, b) { return a.days - b.days; });
   soon.sort(function (a, b) { return a.days - b.days; });
-  return { outStock: outStock, low: low, expired: expired, soon: soon };
+  return { outStock: outStock, low: low, over: over, expired: expired, soon: soon };
 }
 
 function digestHtml_(d) {
@@ -642,6 +646,8 @@ function digestHtml_(d) {
     d.outStock.map(function (i) { return tr([i.name, String(i.cat || ''), 'Min ' + (i.min || 0)]); }).join(''));
   h += sec('🟡 ใกล้หมดสต็อก — ถึงจุดต่ำสุด (' + d.low.length + ')', '#b26a00',
     d.low.map(function (i) { return tr([i.name, String(i.cat || ''), 'เหลือ ' + i.cur + ' (Min ' + i.min + ')']); }).join(''));
+  h += sec('🔵 เกิน Max Stock — ของมากเกินจำเป็น (' + (d.over ? d.over.length : 0) + ')', '#1b2a4a',
+    (d.over || []).map(function (i) { return tr([i.name, String(i.cat || ''), 'คงเหลือ ' + i.cur + ' ' + (i.unit || '') + ' (Max ' + i.max + ')']); }).join(''));
   return '<div style="font-family:Tahoma,sans-serif;max-width:640px">'
     + '<h2 style="color:#1b2a4a;margin:0 0 4px">📦 ระบบพัสดุ ICU นวมินทร์ 1 — แจ้งเตือนประจำวัน</h2>'
     + '<div style="color:#777;font-size:12px;margin-bottom:8px">' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'dd/MM/yyyy HH:mm') + ' น. · โรงพยาบาลลำปาง</div>'
@@ -652,12 +658,14 @@ function digestHtml_(d) {
 // ส่งอีเมลแจ้งเตือน — ส่งเฉพาะวันที่มีเรื่องต้องเตือน (trigger เรียกทุกวัน ~08:00)
 function dailyDigest() {
   var d = buildDigestData_();
-  var total = d.outStock.length + d.low.length + d.expired.length + d.soon.length;
+  var over = d.over ? d.over.length : 0;
+  var total = d.outStock.length + d.low.length + d.expired.length + d.soon.length + over;
   if (total === 0) return;   // ไม่มีอะไรต้องเตือน — ไม่ส่ง
   var subject = '[พัสดุ ICU1] แจ้งเตือน: หมดอายุแล้ว ' + d.expired.length
     + ' · ใกล้หมดอายุ ' + d.soon.length
     + ' · หมดสต็อก ' + d.outStock.length
-    + ' · ใกล้หมด ' + d.low.length;
+    + ' · ใกล้หมด ' + d.low.length
+    + ' · เกิน Max ' + over;
   MailApp.sendEmail({ to: DIGEST_EMAIL, subject: subject, htmlBody: digestHtml_(d) });
 }
 
