@@ -198,8 +198,15 @@ function addItem(item) {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   var sheet = ss.getSheetByName(item.cat);
   if (!sheet) {
-    var catName = item.cat.replace(/^.*\d+\./, '').trim();
+    var catName = item.cat.replace(/^.*\d+\./, '').trim();   // ตัด "📋 1." เหลือชื่อหมวด
     sheet = ss.getSheetByName(catName);
+    // ชื่อชีตอาจยาวกว่าชื่อหมวด เช่น "งานบ้านงานครัว", "Needle+Syringe+กล่องเข็ม"
+    if (!sheet && catName) {
+      var shs = ss.getSheets();
+      for (var z = 0; z < shs.length; z++) {
+        if (isItemSheet(shs[z]) && shs[z].getName().indexOf(catName) > -1) { sheet = shs[z]; break; }
+      }
+    }
   }
   if (!sheet) return { error: 'Sheet not found: ' + item.cat };
 

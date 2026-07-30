@@ -4988,7 +4988,7 @@ function saveNewItem(){
     lot:lot, recv:recv||'—', exp:exp||'—',
     imgUrl:(document.getElementById('add-icon-preview')||{})._imgData||'',        lots:[{lot:lot, recv:recv||'—', exp:exp||'—', qty:cur}]
   };
-  ITEMS.push(newItem);if(typeof GS_ITEMS_URL!=='undefined'&&GS_ITEMS_URL){fetch(GS_ITEMS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'addItem',item:newItem})}).then(function(r){if(!r.ok)console.warn('addItem sync ล้มเหลว: HTTP '+r.status);}).catch(function(err){console.warn('addItem sync ล้มเหลว:',err);});}
+  ITEMS.push(newItem);
 
   // เพิ่มแถวในตาราง
   var tbody = document.getElementById('stock-tbody');
@@ -5023,8 +5023,16 @@ function saveNewItem(){
   if(count) count.textContent = 'แสดง '+tbody.querySelectorAll('tr').length+' รายการ';
 
   cm('add-item-modal');
-  alert('✅ เพิ่มพัสดุ "'+name+'" เรียบร้อยแล้วค่ะ! 🎉');
   syncACLists();
+  // บันทึกลง Google Sheets แบบมีคิว (ล้มเหลวเก็บไว้ส่งใหม่อัตโนมัติ) + ยืนยันผลจริง
+  if(typeof GS_ITEMS_URL!=='undefined' && GS_ITEMS_URL && typeof syncOrQueue==='function'){
+    syncOrQueue(GS_ITEMS_URL, { action:'addItem', item:newItem }, 'เพิ่มพัสดุ: '+name).then(function(ok){
+      if(ok){ alert('✅ เพิ่มพัสดุ "'+name+'" และบันทึกลง Google Sheets เรียบร้อยแล้วค่ะ! 🎉'); }
+      else { alert('✅ เพิ่มพัสดุ "'+name+'" ในแอปแล้วค่ะ\n📡 ส่งขึ้น Google Sheets ไม่สำเร็จ (เน็ตไม่เสถียร) — ระบบเก็บไว้ในคิวและจะส่งอัตโนมัติเมื่อเน็ตกลับมา ข้อมูลไม่หายค่ะ (ดูป้ายมุมขวาล่าง)'); }
+    });
+  } else {
+    alert('✅ เพิ่มพัสดุ "'+name+'" เรียบร้อยแล้วค่ะ! 🎉');
+  }
 }
 
 // ── แก้ filterByStatus ให้เรียก filterStock ──
