@@ -3434,20 +3434,30 @@ var BE_OFFSET = 543;
 function getLotSuggestions(code, inputText){
   if(!code || typeof ITEMS==='undefined') return [];
   var q = String(inputText||'').trim().toLowerCase();
-  var item = ITEMS.find(function(i){ return String(i.code)===String(code); });
   var map = {};
-  if(item && item.lots){
-    item.lots.forEach(function(L){
-      if(!L.lot || L.lot==='—') return;
-      map[L.lot] = { lot:L.lot, exp:(L.exp&&L.exp!=='—')?L.exp:'', recvRaw:0, recvStr:(L.recv&&L.recv!=='—')?L.recv:'' };
-    });
+  // รวมล็อตจากทุกแหล่ง — เติมวันหมดอายุ (exp) ถ้าแหล่งใดแหล่งหนึ่งมี แม้อีกแหล่งไม่มี
+  function add(lot, exp, recvRaw, recvStr){
+    lot = String(lot||'').trim();
+    if(!lot || lot==='—' || lot==='-') return;
+    if(!map[lot]) map[lot] = { lot:lot, exp:'', recvRaw:0, recvStr:'' };
+    var m = map[lot];
+    if(exp && exp!=='—' && exp!=='-' && !m.exp) m.exp = exp;       // เติม exp ที่ยังว่าง
+    if(recvRaw >= m.recvRaw){ m.recvRaw = recvRaw; if(recvStr) m.recvStr = recvStr; }
   }
+  var item = ITEMS.find(function(i){ return String(i.code)===String(code); });
+  if(item && item.lots){
+    item.lots.forEach(function(L){ add(L.lot, L.exp, 0, (L.recv&&L.recv!=='—')?L.recv:''); });
+  }
+  // ทะเบียนล็อตดิบ (รวมล็อตที่ของหมดแล้ว qty 0) — มีวันหมดอายุติดมาด้วย
+  (window.RAW_LOTS||[]).forEach(function(lr){
+    if(String(lr.code||'').trim()===String(code)) add(lr.lot, lr.exp, 0, (lr.recv&&lr.recv!=='—')?lr.recv:'');
+  });
+  // ประวัติรับเข้า — วันหมดอายุดึงจากหมายเหตุ (t.exp) + วันรับล่าสุด
   if(typeof TXLOG!=='undefined'){
     TXLOG.forEach(function(t){
-      if(t.type!=='recv' || String(t.code)!==String(code) || !t.lot || t.lot==='—') return;
+      if(t.type!=='recv' || String(t.code)!==String(code)) return;
       var raw = t.rawDate ? new Date(t.rawDate).getTime() : 0;
-      if(!map[t.lot]) map[t.lot] = { lot:t.lot, exp:'', recvRaw:0, recvStr:'' };
-      if(raw >= map[t.lot].recvRaw){ map[t.lot].recvRaw = raw; if(t.date) map[t.lot].recvStr = t.date; }
+      add(t.lot, t.exp||'', raw, t.date||'');
     });
   }
   return Object.keys(map).map(function(k){ return map[k]; })
@@ -3914,7 +3924,7 @@ function saveWd(){
     const oldStock = item ? (item.cur || 0) : 0;
     const newStock = oldStock + qty;
     if (item) item.cur = newStock;
-    TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'recv', name, code, lot, qty, unit, oldStock, newStock, user });
+    TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'recv', name, code, lot, qty, unit, oldStock, newStock, user, exp: exp || '' });
     syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: recvDateTh, type: 'รับเข้า', code, name, qty, remaining: newStock, lot, user, note: exp ? 'หมดอายุ: '+exp : '' }, 'ประวัติรับเข้า: '+name));
     // อัปเดตยอดคงเหลือแบบ "ส่วนต่าง" (บวกเข้า qty กับยอดจริงในเซิร์ฟเวอร์) — กันหลายคนทำพร้อมกันแล้วเขียนทับกัน
     if (item && item.code && item.code !== '—') {
@@ -4081,6 +4091,8 @@ function parseHistDate(s){
         var d = parseHistDate(rawStr) || new Date(NaN);
         var code = String(row['รหัสพัสดุ'] || '');
         var it = ITEMS.find(function(i){ return i.code === code; });
+        var note = row['หมายเหตุ'] || '';
+        var em = String(note).match(/หมดอายุ[:：]\s*(\S+)/);   // ดึงวันหมดอายุจากหมายเหตุ "หมดอายุ: ..."
         return {
           date: isNaN(d) ? rawStr : thaiDate(d),
           rawDate: isNaN(d) ? null : d,
@@ -4090,6 +4102,8 @@ function parseHistDate(s){
           qty: parseFloat(row['จำนวน']) || 0,
           newStock: parseFloat(row['คงเหลือ']) || 0,
           lot: row['Lot/Serial'] || '—',
+          exp: em ? em[1] : '',
+          note: note,
           user: row['ผู้บันทึก'] || '',
           unit: it ? (it.unit || '') : ''
         };
