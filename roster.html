@@ -12,7 +12,7 @@
 <link rel="manifest" href="./roster.webmanifest">
 <link rel="apple-touch-icon" href="./icon-roster-192.png">
 <link rel="icon" type="image/png" href="./icon-roster-192.png">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   /* ธีมพาสเทลน่ารัก 🌸 — ลาเวนเดอร์/ชมพู/มินต์/พีช */
@@ -134,6 +134,34 @@ table.sum .cbadge{font-size:11px;padding:1px 8px;border-radius:20px;font-weight:
   opacity:0;transition:.25s;pointer-events:none;z-index:99}
 .toast.show{opacity:1}
 @media print{ .tabs,.no-print{display:none!important} .card{box-shadow:none} body{background:#fff} }
+
+/* ===== 🎀 cute enhancements ===== */
+body{background:linear-gradient(160deg,#FDF4FB 0%,#F3EEFB 45%,#FBF1F6 100%);background-attachment:fixed;min-height:100vh}
+h1,h2,.tab,.btn,.dtitle,.card h2,.glabel,.stat .v,.stat .l,.pchip,.dbox .dh{font-family:'Mali','Sarabun',sans-serif}
+.card{border-radius:18px;border:1.5px solid rgba(255,255,255,.7);box-shadow:0 6px 18px rgba(150,110,190,.10)}
+.tab{transition:transform .14s,background .14s,border-color .14s,color .14s}
+.tab:hover{transform:translateY(-2px)}
+.tab.on{background:linear-gradient(135deg,var(--nv),var(--li2));border-color:transparent;box-shadow:0 4px 12px rgba(138,95,194,.3)}
+.btn{transition:transform .12s,border-color .12s,background .12s,box-shadow .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn.pri{background:linear-gradient(135deg,var(--nv),var(--li2));border-color:transparent;box-shadow:0 3px 10px rgba(138,95,194,.28)}
+.pchip{transition:transform .12s,box-shadow .12s,filter .12s;font-weight:600}
+.pchip:hover{transform:translateY(-2px) scale(1.05)}
+.pchip:active{transform:scale(.96)}
+.duty{transition:transform .12s,box-shadow .12s}
+.duty:hover{transform:translateX(3px);box-shadow:0 4px 12px rgba(150,110,190,.12)}
+.duty .code{border-radius:12px}
+.duty .chk{accent-color:var(--li2)}
+.cal .cell{transition:transform .1s,border-color .1s,box-shadow .1s}
+.cal .cell:hover{transform:scale(1.05);z-index:2;box-shadow:0 4px 12px rgba(150,110,190,.18)}
+.cal .cell.today{box-shadow:0 0 0 2px var(--li),0 4px 12px rgba(244,166,192,.45)}
+.cal .cell.today .dnum{color:var(--li2)}
+.stat{transition:transform .14s,box-shadow .14s;border-radius:18px}
+.stat:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(150,110,190,.16)}
+.toast{border-radius:24px;background:linear-gradient(135deg,var(--nv),var(--li2));box-shadow:0 8px 22px rgba(138,95,194,.35)}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
+.hd .emo{animation:bob 2.6s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){ .hd .emo{animation:none} *{transition:none!important} }
 </style>
 </head>
 <body>
@@ -261,7 +289,7 @@ const DEFAULT_DUTIES=[
   {id:"d_abd",code:"บBD", name:"เวรบ่าย BD",   time:"12:00–24:00", hrs:12, cat:"ward",   color:"sky",     emoji:"🌤️"},
   {id:"e_lp", code:"MRI-ลป",  name:"MRI รพ.ลำปาง", time:"08:00–16:00", hrs:8, cat:"ext", color:"teal",    emoji:"🧲"},
   {id:"e_lmac",code:"MRI-LMAC",name:"MRI LMAC",    time:"08:00–16:00", hrs:8, cat:"ext", color:"green",   emoji:"🧠"},
-  {id:"e_ct", code:"CT-ค่าย",  name:"CT รพ.ค่าย",   time:"08:00–16:00", hrs:8, cat:"ext", color:"emerald", emoji:"🩻"},
+  {id:"e_ct", code:"CT-ค่าย",  name:"CT รพ.ค่าย",   time:"08:00–16:00", hrs:8, cat:"ext", color:"emerald", emoji:"🦴"},
   {id:"o_lp", code:"On-call",  name:"On-call ลำปาง", time:"หลัง 16:00", hrs:0, cat:"oncall", color:"orange", emoji:"📞"},
   {id:"x_bl", code:"เจาะเลือด", name:"รับเจาะเลือด",  time:"",           hrs:0, cat:"other",  color:"pink",   emoji:"🩸"},
   {id:"off",  code:"หยุด",     name:"วันหยุด",       time:"",           hrs:0, cat:"off",    color:"grey",   emoji:"😴"},
@@ -531,6 +559,8 @@ if(!state.notes) state.notes={};
   const DEF_EMOJI={}; DEFAULT_DUTIES.forEach(d=>DEF_EMOJI[d.id]=d.emoji);
   let changed=false;
   state.duties.forEach(d=>{ if(d.emoji===undefined){ d.emoji=DEF_EMOJI[d.id]||"📌"; changed=true; } });
+  // เปลี่ยนอิโมจิ CT ตัวเก่า (🩻 บางเครื่องไม่รองรับ) เป็น 🦴
+  state.duties.forEach(d=>{ if(d.id==="e_ct" && d.emoji==="🩻"){ d.emoji="🦴"; changed=true; } });
   if(changed) save();
 })();
 renderDay();
