@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ตารางเวรของฉัน</title>
-<meta name="theme-color" content="#E0A45C">
+<meta name="theme-color" content="#F4A6C0">
 <meta name="apple-mobile-web-app-title" content="ตารางเวร">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -15,27 +15,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* ธีมน้องหมีเนย 🧸 — เนย/คาราเมล/ครีม + พาสเทลชมพู */
-  --nv:#8a5a30;--nv2:#a56d3c;--bl:#FBE7C8;--bg:#FBF4E4;--li:#E0A45C;--li2:#b87d40;
-  --g0:#faf4e8;--g1:#f0e7d6;--g2:#e4d8c2;--g4:#a8977e;--g5:#7a6a54;--g7:#4a3b28;--wt:#fffdf8;
-  --ok-b:#dcfce7;--ok-t:#166534;--wn-b:#fef3c7;--wn-t:#92600e;--rd-b:#fde2e4;--rd-t:#a3405a;
-  --pk-b:#FCE0E6;--pk-t:#c56b82;
-  --r8:10px;--r12:14px;--r16:22px;--sh:0 2px 7px rgba(140,90,40,.13);
+  /* ธีมพาสเทลน่ารัก 🌸 — ลาเวนเดอร์/ชมพู/มินต์/พีช */
+  --nv:#8a5fc2;--nv2:#a982d6;--bl:#FBE7F3;--bg:#FAF5FC;--li:#F4A6C0;--li2:#e07fa3;
+  --g0:#f7f2fb;--g1:#eee6f5;--g2:#e0d4ec;--g4:#a99bb8;--g5:#7d7090;--g7:#4b4159;--wt:#fffdff;
+  --ok-b:#d7f5e3;--ok-t:#1f7a4d;--wn-b:#fdf0c9;--wn-t:#9a7016;--rd-b:#fde0ea;--rd-t:#b04270;
+  --pk-b:#FCE0EE;--pk-t:#c25b8a;
+  --r8:10px;--r12:14px;--r16:22px;--sh:0 2px 8px rgba(150,110,190,.15);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Sarabun',sans-serif;font-size:14px;color:var(--g7);background:var(--bg)}
 button,input,select,textarea{font-family:inherit}
 .wrap{max-width:1080px;margin:0 auto;padding:0 12px 70px}
 
-.hd{background:linear-gradient(135deg,var(--nv2),var(--li) 55%,#F2CE94);color:#fff;
+.hd{background:linear-gradient(115deg,#F7B2B7 0%,#FBD1A2 20%,#FCEFA4 38%,#B7E7C0 57%,#A9D6F0 77%,#C9B3E8 100%);
+  color:var(--g7);
   padding:15px 18px;border-radius:0 0 var(--r16) var(--r16);box-shadow:var(--sh);
   display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
 .hd>*{position:relative;z-index:1}
-.hd::after{content:"🐾";position:absolute;right:-8px;bottom:-16px;font-size:74px;opacity:.13;transform:rotate(-15deg);z-index:0;pointer-events:none}
-.hd .emo{font-size:30px;background:rgba(255,255,255,.25);width:46px;height:46px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.hd h1{font-size:18px;font-weight:700;line-height:1.15;text-shadow:0 1px 2px rgba(120,70,20,.25)}
-.hd .sub{font-size:11px;color:#fff;opacity:.9;margin-top:1px}
+.hd::after{content:"✨";position:absolute;right:-2px;bottom:-12px;font-size:64px;opacity:.3;transform:rotate(-10deg);z-index:0;pointer-events:none}
+.hd .emo{font-size:30px;background:rgba(255,255,255,.6);width:46px;height:46px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 3px rgba(150,110,190,.2)}
+.hd h1{font-size:18px;font-weight:700;line-height:1.15;text-shadow:0 1px 1px rgba(255,255,255,.55)}
+.hd .sub{font-size:11px;color:var(--g5);margin-top:1px;font-weight:500}
 
 .tabs{display:flex;gap:4px;margin:14px 0;flex-wrap:wrap}
 .tab{padding:8px 15px;background:var(--wt);border:1.5px solid var(--g2);border-radius:var(--r8);
@@ -138,13 +139,13 @@ table.sum .cbadge{font-size:11px;padding:1px 8px;border-radius:20px;font-weight:
 <body>
 
 <div class="hd">
-  <div class="emo">🧸</div>
+  <div class="emo">🌈</div>
   <div>
-    <h1>ตารางเวรของฉัน <span style="font-size:14px">🍯</span></h1>
-    <div class="sub">บันทึกเวร–งานนอก–on call · น้องหมีเนยช่วยจำ</div>
+    <h1>ตารางเวรของฉัน <span style="font-size:14px">💕</span></h1>
+    <div class="sub">บันทึกเวร–งานนอก–on call · สดใสน่ารักทุกวัน</div>
   </div>
   <div style="flex:1"></div>
-  <button id="installBtn" class="btn sm no-print hide" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.35);color:#fff">⬇️ ติดตั้งแอป</button>
+  <button id="installBtn" class="btn sm no-print hide" style="background:#fff;border-color:var(--nv);color:var(--nv)">⬇️ ติดตั้งแอป</button>
 </div>
 
 <div class="wrap">
@@ -316,7 +317,7 @@ function renderDay(){
 
   const list=state.entries[state.sel]||[];
   const el=document.getElementById("dutyList");
-  if(list.length===0){ el.innerHTML="<div class='empty' style='text-align:center;padding:14px 0'>🧸 วันนี้ยังไม่มีเวร<br>เลือกเพิ่มด้านล่างได้เลย~</div>"; }
+  if(list.length===0){ el.innerHTML="<div class='empty' style='text-align:center;padding:14px 0'>🌈 วันนี้ยังไม่มีเวร<br>เลือกเพิ่มด้านล่างได้เลย~</div>"; }
   else{
     el.innerHTML=list.map(en=>{
       const du=dutyById(en.dutyId); if(!du) return "";
