@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ตารางเวรของฉัน</title>
+<title>MY's Planner</title>
 <meta name="theme-color" content="#F4A6C0">
-<meta name="apple-mobile-web-app-title" content="ตารางเวร">
+<meta name="apple-mobile-web-app-title" content="MY's Planner">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="application-name" content="ตารางเวร">
+<meta name="application-name" content="MY's Planner">
 <link rel="manifest" href="./roster.webmanifest">
 <link rel="apple-touch-icon" href="./icon-roster-192.png">
 <link rel="icon" type="image/png" href="./icon-roster-192.png">
@@ -169,7 +169,7 @@ h1,h2,.tab,.btn,.dtitle,.card h2,.glabel,.stat .v,.stat .l,.pchip,.dbox .dh{font
 <div class="hd">
   <div class="emo">🌈</div>
   <div>
-    <h1>ตารางเวรของฉัน <span style="font-size:14px">💕</span></h1>
+    <h1>MY's Planner <span style="font-size:14px">💕</span></h1>
     <div class="sub">บันทึกเวร–งานนอก–on call · สดใสน่ารักทุกวัน</div>
   </div>
   <div style="flex:1"></div>
@@ -279,7 +279,7 @@ const PALETTE={
   green:["#dcfce7","#166534"], emerald:["#d1fae5","#065f46"], orange:["#ffedd5","#9a3412"],
   pink:["#fce7f3","#9d174d"], rose:["#ffe4e6","#9f1239"], grey:["#eef1f5","#475569"],
 };
-const CATS={ ward:"เวรหลัก", ext:"งานนอก", oncall:"On-call", other:"งานจร", off:"หยุด" };
+const CATS={ ward:"เวรหลัก", ext:"งานนอก", oncall:"On-call", other:"งานจร", vac:"ลาพักร้อน", off:"หยุด" };
 
 const DEFAULT_DUTIES=[
   {id:"d_n",  code:"ด",   name:"เวรดึก",       time:"24:00–08:00", hrs:8,  cat:"ward",   color:"indigo",  emoji:"🌙"},
@@ -292,6 +292,7 @@ const DEFAULT_DUTIES=[
   {id:"e_ct", code:"CT-ค่าย",  name:"CT รพ.ค่าย",   time:"08:00–16:00", hrs:8, cat:"ext", color:"emerald", emoji:"🦴"},
   {id:"o_lp", code:"On-call",  name:"On-call ลำปาง", time:"หลัง 16:00", hrs:0, cat:"oncall", color:"orange", emoji:"📞"},
   {id:"x_bl", code:"เจาะเลือด", name:"รับเจาะเลือด",  time:"",           hrs:0, cat:"other",  color:"pink",   emoji:"🩸"},
+  {id:"v_vac",code:"พักร้อน",   name:"ลาพักร้อน (Vacation)", time:"",   hrs:0, cat:"vac",   color:"sky",    emoji:"🏖️"},
   {id:"off",  code:"หยุด",     name:"วันหยุด",       time:"",           hrs:0, cat:"off",    color:"grey",   emoji:"😴"},
 ];
 
@@ -447,13 +448,14 @@ document.getElementById("sNext").onclick=()=>{stepMonth(1);renderSummary();};
 function renderSummary(){
   const {y,m}=state.view, nd=daysIn(y,m);
   document.getElementById("sTitle").textContent=`${TH_MONTH[m]} ${be(y)}`;
-  const cnt={}, hrsByCat={}; let totHrs=0,totShift=0,ocCase=0,offDays=0,workDays=new Set();
+  const cnt={}, hrsByCat={}; let totHrs=0,totShift=0,ocCase=0,offDays=0,vacDays=0,workDays=new Set();
   for(let d=1;d<=nd;d++){
     const list=state.entries[dkey(y,m,d)]||[];
     list.forEach(en=>{
       const du=dutyById(en.dutyId); if(!du) return;
       cnt[du.id]=(cnt[du.id]||0)+1;
       if(du.cat==="off"){ offDays++; return; }
+      if(du.cat==="vac"){ vacDays++; return; }
       workDays.add(d); totShift++;
       totHrs+=du.hrs||0; hrsByCat[du.cat]=(hrsByCat[du.cat]||0)+(du.hrs||0);
       if(du.cat==="oncall"&&en.oncall==="case") ocCase++;
@@ -464,10 +466,11 @@ function renderSummary(){
     <div class='stat'><div class='v'>${totHrs}</div><div class='l'>ชั่วโมงรวม</div></div>
     <div class='stat'><div class='v'>${workDays.size}</div><div class='l'>วันที่ออกงาน</div></div>
     <div class='stat'><div class='v'>${ocCase}</div><div class='l'>on-call มีเคส</div></div>
+    <div class='stat'><div class='v'>🏖️ ${vacDays}</div><div class='l'>วันลาพักร้อน</div></div>
     <div class='stat'><div class='v'>${offDays}</div><div class='l'>วันหยุด</div></div>`;
 
   let rows=state.duties.filter(d=>cnt[d.id]).map(d=>{const[bg,fg]=colorOf(d);
-    const hh=d.cat!=='off'?(cnt[d.id]*(d.hrs||0)):0;
+    const hh=(d.cat!=='off'&&d.cat!=='vac')?(cnt[d.id]*(d.hrs||0)):0;
     return `<tr><td><span class='cbadge' style='background:${bg};color:${fg}'>${esc(d.code)}</span> ${esc(d.emoji||'')} ${esc(d.name)}
       <span style='color:var(--g4);font-size:11px'>(${CATS[d.cat]})</span></td>
       <td class='n'>${cnt[d.id]}</td><td class='n'>${hh?hh+' ชม.':'—'}</td></tr>`;}).join("");
@@ -561,6 +564,15 @@ if(!state.notes) state.notes={};
   state.duties.forEach(d=>{ if(d.emoji===undefined){ d.emoji=DEF_EMOJI[d.id]||"📌"; changed=true; } });
   // เปลี่ยนอิโมจิ CT ตัวเก่า (🩻 บางเครื่องไม่รองรับ) เป็น 🦴
   state.duties.forEach(d=>{ if(d.id==="e_ct" && d.emoji==="🩻"){ d.emoji="🦴"; changed=true; } });
+  // เพิ่ม "ลาพักร้อน (Vacation)" ให้ข้อมูลเดิม (ครั้งเดียว วางไว้ก่อน "หยุด")
+  if(!state.addedVac){
+    if(!state.duties.some(d=>d.id==="v_vac")){
+      const vac=DEFAULT_DUTIES.find(d=>d.id==="v_vac");
+      const oi=state.duties.findIndex(d=>d.id==="off");
+      if(oi>=0) state.duties.splice(oi,0,{...vac}); else state.duties.push({...vac});
+    }
+    state.addedVac=true; changed=true;
+  }
   if(changed) save();
 })();
 renderDay();

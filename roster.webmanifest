@@ -1,6 +1,6 @@
 {
-  "name": "ตารางเวรของฉัน — ICU นวมินทร์ 1",
-  "short_name": "ตารางเวร",
+  "name": "MY's Planner — ตารางเวร ICU นวมินทร์ 1",
+  "short_name": "MY's Planner",
   "description": "บันทึกเวร เช้า/บ่าย/ดึก งานนอก MRI/CT และ on call — ใช้งานได้แม้ออฟไลน์",
   "lang": "th",
   "id": "./roster.html",

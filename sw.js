@@ -3,7 +3,7 @@
 // กลยุทธ์: network-first สำหรับไฟล์แอป (ออนไลน์ได้เวอร์ชันล่าสุด, ออฟไลน์ใช้ที่ cache ไว้)
 // ส่วน Google Sheets / Apps Script (คนละ origin) ปล่อยไปเน็ตตามปกติ — ออฟไลน์แล้วระบบคิวจัดการเอง
 
-const CACHE = 'icu-nawamin1-v7';
+const CACHE = 'icu-nawamin1-v8';
 const SHELL = [
   './',
   './index.html',
