@@ -254,17 +254,17 @@ const PALETTE={
 const CATS={ ward:"เวรหลัก", ext:"งานนอก", oncall:"On-call", other:"งานจร", off:"หยุด" };
 
 const DEFAULT_DUTIES=[
-  {id:"d_n",  code:"ด",   name:"เวรดึก",       time:"24:00–08:00", hrs:8,  cat:"ward",   color:"indigo"},
-  {id:"d_m",  code:"ช",   name:"เวรเช้า",      time:"08:00–16:00", hrs:8,  cat:"ward",   color:"amber"},
-  {id:"d_a",  code:"บ",   name:"เวรบ่าย",      time:"16:00–24:00", hrs:8,  cat:"ward",   color:"blue"},
-  {id:"d_nbd",code:"ดBD", name:"เวรดึก BD",    time:"24:00–12:00", hrs:12, cat:"ward",   color:"violet"},
-  {id:"d_abd",code:"บBD", name:"เวรบ่าย BD",   time:"12:00–24:00", hrs:12, cat:"ward",   color:"sky"},
-  {id:"e_lp", code:"MRI-ลป",  name:"MRI รพ.ลำปาง", time:"08:00–16:00", hrs:8, cat:"ext", color:"teal"},
-  {id:"e_lmac",code:"MRI-LMAC",name:"MRI LMAC",    time:"08:00–16:00", hrs:8, cat:"ext", color:"green"},
-  {id:"e_ct", code:"CT-ค่าย",  name:"CT รพ.ค่าย",   time:"08:00–16:00", hrs:8, cat:"ext", color:"emerald"},
-  {id:"o_lp", code:"On-call",  name:"On-call ลำปาง", time:"หลัง 16:00", hrs:0, cat:"oncall", color:"orange"},
-  {id:"x_bl", code:"เจาะเลือด", name:"รับเจาะเลือด",  time:"",           hrs:0, cat:"other",  color:"pink"},
-  {id:"off",  code:"หยุด",     name:"วันหยุด",       time:"",           hrs:0, cat:"off",    color:"grey"},
+  {id:"d_n",  code:"ด",   name:"เวรดึก",       time:"24:00–08:00", hrs:8,  cat:"ward",   color:"indigo",  emoji:"🌙"},
+  {id:"d_m",  code:"ช",   name:"เวรเช้า",      time:"08:00–16:00", hrs:8,  cat:"ward",   color:"amber",   emoji:"☀️"},
+  {id:"d_a",  code:"บ",   name:"เวรบ่าย",      time:"16:00–24:00", hrs:8,  cat:"ward",   color:"blue",    emoji:"🌆"},
+  {id:"d_nbd",code:"ดBD", name:"เวรดึก BD",    time:"24:00–12:00", hrs:12, cat:"ward",   color:"violet",  emoji:"🌛"},
+  {id:"d_abd",code:"บBD", name:"เวรบ่าย BD",   time:"12:00–24:00", hrs:12, cat:"ward",   color:"sky",     emoji:"🌤️"},
+  {id:"e_lp", code:"MRI-ลป",  name:"MRI รพ.ลำปาง", time:"08:00–16:00", hrs:8, cat:"ext", color:"teal",    emoji:"🧲"},
+  {id:"e_lmac",code:"MRI-LMAC",name:"MRI LMAC",    time:"08:00–16:00", hrs:8, cat:"ext", color:"green",   emoji:"🧠"},
+  {id:"e_ct", code:"CT-ค่าย",  name:"CT รพ.ค่าย",   time:"08:00–16:00", hrs:8, cat:"ext", color:"emerald", emoji:"🩻"},
+  {id:"o_lp", code:"On-call",  name:"On-call ลำปาง", time:"หลัง 16:00", hrs:0, cat:"oncall", color:"orange", emoji:"📞"},
+  {id:"x_bl", code:"เจาะเลือด", name:"รับเจาะเลือด",  time:"",           hrs:0, cat:"other",  color:"pink",   emoji:"🩸"},
+  {id:"off",  code:"หยุด",     name:"วันหยุด",       time:"",           hrs:0, cat:"off",    color:"grey",   emoji:"😴"},
 ];
 
 let state=load();
@@ -332,7 +332,7 @@ function renderDay(){
         </div>`;
       }
       return `<div class='duty ${en.done?'done':''}' style='border-left-color:${fg}'>
-        <span class='code' style='background:${bg};color:${fg}'>${esc(du.code)}</span>
+        <span class='code' style='background:${bg};color:${fg}'>${esc(du.emoji||'')} ${esc(du.code)}</span>
         <div class='info'><div class='nm'>${esc(du.name)}</div>
           <div class='meta'>${du.time?esc(du.time):CATS[du.cat]}${du.hrs?` · ${du.hrs} ชม.`:''}</div>${oc}</div>
         <input type='checkbox' class='chk' data-done='${en.id}' ${en.done?'checked':''} title='ทำแล้ว'>
@@ -377,7 +377,7 @@ function renderPicker(){
     if(!ds.length) return;
     h+=`<div class='pick-grp'><div class='glabel'>${CATS[cat]}</div><div class='chips'>`;
     ds.forEach(d=>{ const[bg,fg]=colorOf(d);
-      h+=`<button class='pchip' style='background:${bg};color:${fg}' data-add='${d.id}'>${esc(d.code)} · ${esc(d.name)}</button>`;
+      h+=`<button class='pchip' style='background:${bg};color:${fg}' data-add='${d.id}'>${esc(d.emoji||'')} ${esc(d.name)}</button>`;
     });
     h+="</div></div>";
   });
@@ -401,7 +401,7 @@ function renderCal(){
     const key=dkey(y,m,d), dow=new Date(y,m,d).getDay();
     const list=state.entries[key]||[];
     let bdgs=list.map(en=>{const du=dutyById(en.dutyId);if(!du)return"";const[bg,fg]=colorOf(du);
-      return `<div class='bdg ${en.done?'done':''}' style='background:${bg};color:${fg}'>${esc(du.code)}</div>`;}).join("");
+      return `<div class='bdg ${en.done?'done':''}' style='background:${bg};color:${fg}'>${esc(du.emoji||'')}${esc(du.code)}</div>`;}).join("");
     h+=`<div class='cell ${dow===0||dow===6?'we':''} ${key===tk?'today':''}' data-k='${key}'>
       <div class='dnum'>${d}</div>${bdgs}</div>`;
   }
@@ -410,7 +410,7 @@ function renderCal(){
 
   // legend
   document.getElementById("calLegend").innerHTML=state.duties.map(d=>{const[bg,fg]=colorOf(d);
-    return `<span class='bdg' style='background:${bg};color:${fg};font-size:11px;padding:2px 8px'>${esc(d.code)} ${esc(d.name)}</span>`;}).join("");
+    return `<span class='bdg' style='background:${bg};color:${fg};font-size:11px;padding:2px 8px'>${esc(d.emoji||'')} ${esc(d.name)}</span>`;}).join("");
 }
 
 /* ================= SUMMARY ================= */
@@ -440,7 +440,7 @@ function renderSummary(){
 
   let rows=state.duties.filter(d=>cnt[d.id]).map(d=>{const[bg,fg]=colorOf(d);
     const hh=d.cat!=='off'?(cnt[d.id]*(d.hrs||0)):0;
-    return `<tr><td><span class='cbadge' style='background:${bg};color:${fg}'>${esc(d.code)}</span> ${esc(d.name)}
+    return `<tr><td><span class='cbadge' style='background:${bg};color:${fg}'>${esc(d.code)}</span> ${esc(d.emoji||'')} ${esc(d.name)}
       <span style='color:var(--g4);font-size:11px'>(${CATS[d.cat]})</span></td>
       <td class='n'>${cnt[d.id]}</td><td class='n'>${hh?hh+' ชม.':'—'}</td></tr>`;}).join("");
   if(!rows) rows="<tr><td colspan='3' style='color:var(--g4)'>ยังไม่มีข้อมูลในเดือนนี้</td></tr>";
@@ -454,6 +454,7 @@ function renderSettings(){
   el.innerHTML=state.duties.map((d,i)=>{
     const sw=Object.keys(PALETTE).map(c=>`<button data-col='${i}' data-c='${c}' class='${d.color===c?'on':''}' style='background:${PALETTE[c][0]}' title='${c}'></button>`).join("");
     return `<div class='drow'>
+      <input class='e' data-i='${i}' data-f='emoji' value='${esc(d.emoji||'')}' placeholder='😀' title='อิโมจิ' style='width:52px;text-align:center;font-size:16px'>
       <input class='c' data-i='${i}' data-f='code' value='${esc(d.code)}' placeholder='ย่อ'>
       <input class='nm' data-i='${i}' data-f='name' value='${esc(d.name)}' placeholder='ชื่องาน'>
       <input class='t' data-i='${i}' data-f='time' value='${esc(d.time)}' placeholder='เวลา'>
@@ -481,7 +482,7 @@ function renderSettings(){
 }
 function moveDuty(i,dir){const j=i+dir;if(j<0||j>=state.duties.length)return;[state.duties[i],state.duties[j]]=[state.duties[j],state.duties[i]];save();renderSettings();}
 document.getElementById("addDuty").onclick=()=>{
-  state.duties.push({id:uid(),code:"ใหม่",name:"งานใหม่",time:"",hrs:0,cat:"other",color:"rose"});
+  state.duties.push({id:uid(),code:"ใหม่",name:"งานใหม่",time:"",hrs:0,cat:"other",color:"rose",emoji:"📌"});
   save(); renderSettings();
 };
 
@@ -525,6 +526,13 @@ if(isIOS && !isStandalone) installBtn.classList.remove("hide");
 if(!state.sel) state.sel=todayKey();
 if(!state.view) state.view=ymNow();
 if(!state.notes) state.notes={};
+// เติมอิโมจิให้ข้อมูลเดิมที่บันทึกไว้ก่อนมีฟีเจอร์นี้
+(function(){
+  const DEF_EMOJI={}; DEFAULT_DUTIES.forEach(d=>DEF_EMOJI[d.id]=d.emoji);
+  let changed=false;
+  state.duties.forEach(d=>{ if(d.emoji===undefined){ d.emoji=DEF_EMOJI[d.id]||"📌"; changed=true; } });
+  if(changed) save();
+})();
 renderDay();
 </script>
 </body>
