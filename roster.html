@@ -101,7 +101,8 @@ label.fld{font-size:11px;font-weight:600;color:var(--g5);display:block;margin-bo
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
 .cal .dow{text-align:center;font-size:11px;font-weight:700;color:var(--g5);padding:4px 0}
 .cal .cell{min-height:74px;border:1.5px solid var(--g1);border-radius:var(--r8);padding:4px;cursor:pointer;
-  background:var(--wt);display:flex;flex-direction:column;gap:2px;transition:.1s;overflow:hidden}
+  background:var(--wt);display:flex;flex-direction:column;gap:2px;transition:.1s;overflow:hidden;position:relative}
+.cal .nmk{position:absolute;top:2px;left:3px;font-size:11px;line-height:1;z-index:1}
 .cal .cell:hover{border-color:var(--li)}
 .cal .cell.other{background:var(--g0);opacity:.55}
 .cal .cell.today{border-color:var(--nv);box-shadow:0 0 0 1.5px var(--nv)}
@@ -398,20 +399,45 @@ function addEntry(dutyId){
   state.entries[state.sel].push({id:uid(),dutyId,done:false});
   save(); renderDay();
 }
+// ปุ่มลัด "เวรควง" — แตะครั้งเดียวลง 2 เวร
+const COMBOS=[
+  {id:"c_db", name:"ดึก/บ่าย", ids:["d_n","d_a"]},
+  {id:"c_cb", name:"เช้า/บ่าย", ids:["d_m","d_a"]},
+];
+function addCombo(cid){
+  const c=COMBOS.find(x=>x.id===cid); if(!c) return;
+  if(!state.entries[state.sel]) state.entries[state.sel]=[];
+  c.ids.forEach(did=>{ if(state.duties.some(d=>d.id===did)) state.entries[state.sel].push({id:uid(),dutyId:did,done:false}); });
+  save(); renderDay();
+}
+function comboGroupHtml(){
+  const avail=COMBOS.filter(c=>c.ids.every(id=>state.duties.some(d=>d.id===id)));
+  if(!avail.length) return "";
+  let h=`<div class='pick-grp'><div class='glabel'>เวรควง · แตะทีเดียว 2 เวร</div><div class='chips'>`;
+  avail.forEach(c=>{
+    const d1=dutyById(c.ids[0]), d2=dutyById(c.ids[1]);
+    const [b1,f1]=colorOf(d1), [b2]=colorOf(d2);
+    h+=`<button class='pchip' style='background:linear-gradient(120deg,${b1} 0%,${b1} 48%,${b2} 52%,${b2} 100%);color:${f1};border-color:${f1}22' data-combo='${c.id}'>${esc(d1.emoji||'')}${esc(d2.emoji||'')} ${esc(c.name)}</button>`;
+  });
+  h+="</div></div>"; return h;
+}
 function renderPicker(){
   const p=document.getElementById("picker");
   let h="";
   Object.keys(CATS).forEach(cat=>{
     const ds=state.duties.filter(d=>d.cat===cat);
-    if(!ds.length) return;
-    h+=`<div class='pick-grp'><div class='glabel'>${CATS[cat]}</div><div class='chips'>`;
-    ds.forEach(d=>{ const[bg,fg]=colorOf(d);
-      h+=`<button class='pchip' style='background:${bg};color:${fg}' data-add='${d.id}'>${esc(d.emoji||'')} ${esc(d.name)}</button>`;
-    });
-    h+="</div></div>";
+    if(ds.length){
+      h+=`<div class='pick-grp'><div class='glabel'>${CATS[cat]}</div><div class='chips'>`;
+      ds.forEach(d=>{ const[bg,fg]=colorOf(d);
+        h+=`<button class='pchip' style='background:${bg};color:${fg}' data-add='${d.id}'>${esc(d.emoji||'')} ${esc(d.name)}</button>`;
+      });
+      h+="</div></div>";
+    }
+    if(cat==="ward") h+=comboGroupHtml();
   });
   p.innerHTML=h;
   p.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addEntry(b.dataset.add));
+  p.querySelectorAll("[data-combo]").forEach(b=>b.onclick=()=>addCombo(b.dataset.combo));
 }
 
 /* ================= CALENDAR ================= */
@@ -429,9 +455,11 @@ function renderCal(){
   for(let d=1;d<=nd;d++){
     const key=dkey(y,m,d), dow=new Date(y,m,d).getDay();
     const list=state.entries[key]||[];
+    const hasNote=(state.notes[key]||"").trim();
     let bdgs=list.map(en=>{const du=dutyById(en.dutyId);if(!du)return"";const[bg,fg]=colorOf(du);
       return `<div class='bdg ${en.done?'done':''}' style='background:${bg};color:${fg}'>${esc(du.emoji||'')}${esc(du.code)}</div>`;}).join("");
     h+=`<div class='cell ${dow===0||dow===6?'we':''} ${key===tk?'today':''}' data-k='${key}'>
+      ${hasNote?`<span class='nmk' title='มีโน้ต: ${esc(hasNote)}'>📝</span>`:""}
       <div class='dnum'>${d}</div>${bdgs}</div>`;
   }
   const cg=document.getElementById("calGrid"); cg.innerHTML=h;
