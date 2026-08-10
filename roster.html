@@ -72,7 +72,7 @@ label.fld{font-size:11px;font-weight:600;color:var(--g5);display:block;margin-bo
 /* duty cards in day view */
 .duty{display:flex;align-items:center;gap:11px;border:1.5px solid var(--g1);border-left-width:5px;
   border-radius:var(--r8);padding:10px 12px;margin-bottom:9px;background:var(--wt)}
-.duty .code{font-weight:700;font-size:14px;padding:4px 9px;border-radius:6px;white-space:nowrap}
+.duty .code{font-weight:700;font-size:17px;padding:6px 12px;border-radius:6px;white-space:nowrap}
 .duty .info{flex:1;min-width:0}
 .duty .nm{font-weight:600;font-size:14px}
 .duty .meta{font-size:12px;color:var(--g5)}
@@ -100,15 +100,17 @@ label.fld{font-size:11px;font-weight:600;color:var(--g5);display:block;margin-bo
 /* calendar */
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
 .cal .dow{text-align:center;font-size:11px;font-weight:700;color:var(--g5);padding:4px 0}
-.cal .cell{min-height:74px;border:1.5px solid var(--g1);border-radius:var(--r8);padding:4px;cursor:pointer;
-  background:var(--wt);display:flex;flex-direction:column;gap:2px;transition:.1s;overflow:hidden;position:relative}
-.cal .nmk{position:absolute;top:2px;left:3px;font-size:11px;line-height:1;z-index:1}
+.cal .cell{min-height:90px;border:1.5px solid var(--g1);border-radius:var(--r8);padding:5px;cursor:pointer;
+  background:var(--wt);display:flex;flex-direction:column;gap:3px;transition:.1s;overflow:hidden;position:relative}
+.cal .cell.noted{border-color:var(--pk-t)}
+.cal .nmk{position:absolute;top:3px;left:3px;font-size:13px;line-height:1;z-index:1;
+  background:var(--pk-b);border-radius:8px;padding:2px 4px;box-shadow:0 1px 3px rgba(150,110,190,.25)}
 .cal .cell:hover{border-color:var(--li)}
 .cal .cell.other{background:var(--g0);opacity:.55}
 .cal .cell.today{border-color:var(--nv);box-shadow:0 0 0 1.5px var(--nv)}
 .cal .cell.we .dnum{color:var(--li2)}
 .cal .dnum{font-size:12px;font-weight:700;color:var(--g7);align-self:flex-end;line-height:1}
-.cal .bdg{font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cal .bdg{font-size:12.5px;font-weight:700;padding:2px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.2px}
 .cal .bdg.done{opacity:.5;text-decoration:line-through}
 
 /* summary */
@@ -116,7 +118,7 @@ table.sum{width:100%;border-collapse:collapse;font-size:13px}
 table.sum th,table.sum td{padding:8px 10px;border-bottom:1px solid var(--g1);text-align:left}
 table.sum th{font-size:11px;color:var(--g5);font-weight:600;background:var(--g0)}
 table.sum td.n{text-align:right;font-weight:700;color:var(--nv)}
-table.sum .cbadge{font-size:11px;padding:1px 8px;border-radius:20px;font-weight:600}
+table.sum .cbadge{font-size:14px;padding:3px 10px;border-radius:20px;font-weight:700}
 .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
 .stat{background:var(--wt);border-radius:var(--r12);box-shadow:var(--sh);padding:14px}
 .stat .v{font-size:24px;font-weight:700;color:var(--nv)}
@@ -458,7 +460,7 @@ function renderCal(){
     const hasNote=(state.notes[key]||"").trim();
     let bdgs=list.map(en=>{const du=dutyById(en.dutyId);if(!du)return"";const[bg,fg]=colorOf(du);
       return `<div class='bdg ${en.done?'done':''}' style='background:${bg};color:${fg}'>${esc(du.emoji||'')}${esc(du.code)}</div>`;}).join("");
-    h+=`<div class='cell ${dow===0||dow===6?'we':''} ${key===tk?'today':''}' data-k='${key}'>
+    h+=`<div class='cell ${dow===0||dow===6?'we':''} ${key===tk?'today':''} ${hasNote?'noted':''}' data-k='${key}'>
       ${hasNote?`<span class='nmk' title='มีโน้ต: ${esc(hasNote)}'>📝</span>`:""}
       <div class='dnum'>${d}</div>${bdgs}</div>`;
   }
