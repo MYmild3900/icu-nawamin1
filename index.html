@@ -3700,15 +3700,21 @@ function selectWdItem(el, code){
     lotList.appendChild(div);
   });
 
-  // เตือนเมื่อยอดรวมล็อตไม่ตรงกับคงเหลือ (ข้อมูลสองฝั่งแตกกัน — ควรตรวจนับ)
-  var lotSum = item.lots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); }, 0);
+  // เตือนเฉพาะความผิดปกติจริง — นับเฉพาะล็อต "มีชื่อ" (ตัดล็อต —/-/ว่าง ที่เป็นของไม่ระบุล็อต) ให้ตรงเกณฑ์หน้า health (ดู index.html:6291-6297)
+  //   • ผลรวมล็อตมีชื่อ > คงเหลือ  → ผิดปกติจริง (ยอดไม่ระบุล็อตจะติดลบ) → เตือน ⚠️ ชวนไปนับสต็อก
+  //   • คงเหลือ ≥ ผลรวมล็อตมีชื่อ → ปกติ (มีของไม่ระบุล็อตอยู่) → แสดงข้อความเฉยๆ ไม่ชวนไปนับ (กันลูปวนนับสต็อก)
+  var isBlankLot = function(n){ return !n || n==='—' || n==='-'; };
+  var namedLotSum = item.lots.reduce(function(s,L){ return isBlankLot(L.lot) ? s : s+(parseFloat(L.qty)||0); }, 0);
   var curNum = parseFloat(item.cur)||0;
-  if(lotSum !== curNum){
+  if(namedLotSum > curNum){
     var mw = document.createElement('div');
     mw.style.cssText='margin-top:6px;padding:7px 10px;border-radius:var(--r4);background:var(--wn-b);border:1px solid #fde68a;font-size:11px;color:var(--wn-t);font-weight:600';
-    mw.textContent = (lotSum>curNum)
-      ? '⚠️ ยอดรวมล็อต ('+lotSum+') มากกว่าคงเหลือ ('+curNum+' '+item.unit+') — แนะนำตรวจนับจริงแล้วปรับยอดที่หน้า "นับสต็อก" ค่ะ'
-      : 'ℹ️ มีของ '+(curNum-lotSum)+' '+item.unit+' ที่ยังไม่ระบุล็อต (ยอดตั้งต้นก่อนเริ่มบันทึกล็อต)';
+    mw.textContent = '⚠️ ยอดรวมล็อตมีชื่อ ('+namedLotSum+') มากกว่าคงเหลือ ('+curNum+' '+item.unit+') — แนะนำตรวจนับจริงแล้วปรับยอดที่หน้า "นับสต็อก" ค่ะ';
+    lotList.appendChild(mw);
+  } else if(curNum > namedLotSum){
+    var mw = document.createElement('div');
+    mw.style.cssText='margin-top:6px;padding:7px 10px;border-radius:var(--r4);background:var(--g1);border:1px solid var(--g2);font-size:11px;color:var(--g5)';
+    mw.textContent = 'ℹ️ มีของ '+(curNum-namedLotSum)+' '+item.unit+' ที่ยังไม่ระบุล็อต (ยอดตั้งต้นก่อนเริ่มบันทึกล็อต)';
     lotList.appendChild(mw);
   }
 
@@ -3765,7 +3771,18 @@ function findRowItem(row, nm){
   if(nm){ var byTyped = ITEMS.find(function(i){ return String(i.code).toLowerCase()===lower; }); if(byTyped) return byTyped; }
   if(byCode) return byCode;
   if(!nm) return null;
+  if(lower.length < 3) return null;   // ข้อความสั้นมาก (1-2 ตัวอักษร) เกือบทั้งหมดคือสแกน/พิมพ์เพี้ยน — ไม่เดาแบบ substring (กันจับผิดตัว เช่น "ภ")
   return ITEMS.find(function(i){ return i.name.toLowerCase().includes(lower) || lower.includes(i.name.toLowerCase()); }) || null;
+}
+// ── เพดานจำนวน: กันพิมพ์/สแกนเกินจริง (ใช้กับ รับเข้า/นับสต๊อก/ปรับยอด/นับท้ายเวร) ──
+// คืน 'block' = เกินเพดานสูงสุด แทบแน่ว่าผิด → ห้ามบันทึก · 'warn' = มากผิดปกติ → ให้ยืนยันก่อน · 'ok' = ปกติ
+var QTY_HARD_CAP = 9999;
+function qtyFlag(qty, item){
+  qty = parseFloat(qty)||0;
+  if(qty > QTY_HARD_CAP) return 'block';
+  var mx = item ? (parseFloat(item.max)||0) : 0;
+  if(qty > 1000 || (mx > 0 && qty > mx*20)) return 'warn';
+  return 'ok';
 }
 function saveWd(){
   const user = document.getElementById('sbn').textContent || 'พยาบาล';
@@ -3773,8 +3790,11 @@ function saveWd(){
   let saved  = 0;
   const syncPromises = [];
 
-  // Poka-Yoke: ห้ามเบิกเกินคงเหลือ (กันยอดคงเหลือกับทะเบียนล็อตแตกกัน)
+  // Poka-Yoke #1: ชื่อในแถวต้อง "ตรงเป๊ะ" กับพัสดุจริง (หรือเป็นรหัส) — กันสแกน/พิมพ์เพี้ยน หรือ code เก่าค้างในแถว
+  //   ไปหักพัสดุผิดตัว (เช่นเคส "ภ" ที่พิมพ์ทับแถวซึ่งผูก NG No.16 ไว้ แล้วระบบหัก NG แทน)
+  // Poka-Yoke #2: ห้ามเบิกเกินคงเหลือ (กันยอดคงเหลือกับทะเบียนล็อตแตกกัน)
   var overErrs = [];
+  var nameErrs = [];
   document.querySelectorAll('#pg-wd .wd-qty').forEach(function(qtyInp){
     var container = qtyInp.closest('div[style]') || qtyInp.closest('.rrow');
     if (!container) return;
@@ -3785,8 +3805,17 @@ function saveWd(){
     if (q <= 0) return;
     var nm = nameInp.value.trim();
     var it = findRowItem(qtyInp.closest('.wd-item-row') || container, nm);
-    if (it && q > (parseFloat(it.cur)||0)) overErrs.push('• '+it.name+' — เบิก '+q+' แต่คงเหลือ '+it.cur+' '+(it.unit||''));
+    // ชื่อที่พิมพ์ต้องตรงกับชื่อพัสดุเป๊ะ หรือตรงกับรหัสพัสดุ — ไม่งั้นถือว่าไม่ชัวร์ ห้ามบันทึก
+    if (!it || (String(it.name).trim() !== nm && String(it.code).trim() !== nm)) {
+      nameErrs.push('• "' + nm + '"' + (it ? ' — ระบบจับได้เป็น "' + it.name + '" ซึ่งไม่ตรงกับที่พิมพ์' : ' — ไม่พบพัสดุนี้ในระบบ'));
+      return;
+    }
+    if (q > (parseFloat(it.cur)||0)) overErrs.push('• '+it.name+' — เบิก '+q+' แต่คงเหลือ '+it.cur+' '+(it.unit||''));
   });
+  if (nameErrs.length > 0) {
+    alert('❌ มีชื่อพัสดุที่ไม่ตรงกับรายการในระบบ — ยังบันทึกไม่ได้ค่ะ\n\n'+nameErrs.join('\n')+'\n\n👉 กรุณาลบข้อความในช่องนั้นแล้วพิมพ์ใหม่ หรือเลือกพัสดุจากรายการที่เด้งขึ้นมา (กันการสแกน/พิมพ์เพี้ยนไปหักพัสดุผิดตัวค่ะ)');
+    return;
+  }
   if (overErrs.length > 0) {
     alert('❌ เบิกเกินยอดคงเหลือ ไม่สามารถบันทึกได้ค่ะ\n\n'+overErrs.join('\n')+'\n\nถ้าของจริงบนชั้นมีมากกว่าในระบบ กรุณาไปที่หน้า "นับสต็อก/ปรับยอด" เพื่อปรับยอดให้ตรงก่อนนะคะ');
     return;
@@ -3897,6 +3926,34 @@ function saveWd(){
   })();
   let saved = 0;
   const syncPromises = [];
+
+  // Poka-Yoke: ชื่อในแถวต้อง "ตรงเป๊ะ" กับพัสดุจริง (หรือเป็นรหัส) — กันสแกน/พิมพ์เพี้ยนไปเพิ่มสต็อกผิดตัว (แบบเดียวกับหน้าเบิก)
+  //            + ตรวจเพดานจำนวน (กันพิมพ์/สแกนเกินจริง)
+  var recvNameErrs = [], recvQtyBlock = [], recvQtyWarn = [];
+  document.querySelectorAll('#pg-recv .rrow').forEach(function(row){
+    var nInp = row.querySelector('input[type=text]');
+    var qInp = row.querySelector('.recv-qty') || row.querySelector('input[type=number]');
+    if(!nInp || !nInp.value.trim()) return;
+    var q = parseInt(qInp && qInp.value) || 0;
+    if(q <= 0) return;
+    var nm = nInp.value.trim();
+    var it = findRowItem(row, nm);
+    if(!it || (String(it.name).trim() !== nm && String(it.code).trim() !== nm)){
+      recvNameErrs.push('• "'+nm+'"'+(it ? ' — ระบบจับได้เป็น "'+it.name+'" ซึ่งไม่ตรงกับที่พิมพ์' : ' — ไม่พบพัสดุนี้ในระบบ'));
+    }
+    var f = qtyFlag(q, it);
+    if(f==='block') recvQtyBlock.push('• '+nm+' — จำนวน '+q);
+    else if(f==='warn') recvQtyWarn.push('• '+nm+' — จำนวน '+q);
+  });
+  if(recvNameErrs.length){
+    alert('❌ มีชื่อพัสดุที่ไม่ตรงกับรายการในระบบ — ยังบันทึกไม่ได้ค่ะ\n\n'+recvNameErrs.join('\n')+'\n\n👉 กรุณาลบข้อความในช่องนั้นแล้วพิมพ์ใหม่ หรือเลือกพัสดุจากรายการที่เด้งขึ้นมาค่ะ');
+    return;
+  }
+  if(recvQtyBlock.length){
+    alert('❌ จำนวนมากผิดปกติจนน่าจะพิมพ์/สแกนผิด (เกิน '+QTY_HARD_CAP+') — บันทึกไม่ได้ค่ะ\n\n'+recvQtyBlock.join('\n'));
+    return;
+  }
+  if(recvQtyWarn.length && !confirm('⚠️ จำนวนที่รับเข้าต่อไปนี้มากผิดปกติ ยืนยันว่าถูกต้องไหมคะ?\n\n'+recvQtyWarn.join('\n'))) return;
 
   document.querySelectorAll('#pg-recv .rrow').forEach(row => {
     const nameInp = row.querySelector('input[type=text]');
@@ -6195,10 +6252,22 @@ function saveShiftCount(){
     if(diff!==0) changes.push({item:item, counted:counted, diff:diff});
   });
   if(!changes.length){ alert('ยอดตรงกับระบบทุกรายการ ไม่มีอะไรต้องบันทึกค่ะ 🎉'); return; }
+  // เพดานจำนวน — กันนับเกินจริง (พิมพ์ผิด/สแกนเพี้ยน)
+  var shQtyBlock=[], shQtyWarn=[];
+  changes.forEach(function(c){
+    var f=qtyFlag(c.counted, c.item);
+    if(f==='block') shQtyBlock.push('• '+c.item.name+' — นับได้ '+c.counted);
+    else if(f==='warn') shQtyWarn.push('• '+c.item.name+' — นับได้ '+c.counted);
+  });
+  if(shQtyBlock.length){ alert('❌ จำนวนมากผิดปกติจนน่าจะพิมพ์ผิด (เกิน '+QTY_HARD_CAP+') — บันทึกไม่ได้ค่ะ\n\n'+shQtyBlock.join('\n')); return; }
+  if(shQtyWarn.length && !confirm('⚠️ ยอดนับต่อไปนี้มากผิดปกติ ยืนยันว่าถูกต้องไหมคะ?\n\n'+shQtyWarn.join('\n'))) return;
   var lines=changes.map(function(c){ return '• '+c.item.name+': '+(c.diff<0?('ใช้ไป '+(-c.diff)):('พบเกิน +'+c.diff))+' → เหลือ '+c.counted; });
   if(!confirm('บันทึกนับท้ายเวร '+changes.length+' รายการ:\n\n'+lines.slice(0,12).join('\n')
     +(lines.length>12?'\n... (อีก '+(lines.length-12)+' รายการ)':'')+'\n\nของที่ลดลงจะบันทึกเป็น "เบิกออก (นับท้ายเวร)" ค่ะ')) return;
 
+  // กันกดซ้ำ (double-submit) — ปิดปุ่มระหว่างส่ง
+  var shBtn=document.querySelector('#pg-shift button[onclick*="saveShiftCount"]');
+  if(shBtn){ shBtn.disabled=true; shBtn.dataset.orig=shBtn.textContent; shBtn.textContent='⏳ กำลังบันทึก...'; }
   var now=new Date();
   var user=document.getElementById('sbn').textContent||'พยาบาล';
   var syncPromises=[];
@@ -6227,12 +6296,14 @@ function saveShiftCount(){
       TXLOG.unshift({date:thaiDate(now),rawDate:now,type:'adj',name:item.name,code:item.code,lot:'—',qty:c.diff,unit:item.unit,oldStock:oldStock,newStock:c.counted,user:user});
       syncPromises.push(syncOrQueue(GS_HISTORY_URL,{date:thaiDate(now),type:'ปรับยอด',code:item.code,name:item.name,qty:c.diff,remaining:c.counted,lot:'—',user:user,note:'นับท้ายเวร (พบเกิน)'},'ประวัตินับท้ายเวร: '+item.name));
     }
-    syncPromises.push(syncOrQueue(GS_ITEMS_URL,{action:'updateStock',code:item.code,cur:c.counted},'ยอดคงเหลือ: '+item.name));
+    // ★ ใช้ adjustStock (ส่วนต่าง + lock + txId) แทน updateStock — กันเขียนทับยอดคนอื่นที่เบิกพร้อมกัน
+    if(c.diff !== 0) syncPromises.push(syncOrQueue(GS_ITEMS_URL,{action:'adjustStock',code:item.code,delta:c.diff},'ยอดคงเหลือ: '+item.name));
   });
   Promise.all(syncPromises).then(function(results){
     var allOk=results.every(function(ok){ return ok; });
     if(allOk){ alert('🌙 บันทึกนับท้ายเวร '+changes.length+' รายการเรียบร้อยค่ะ ขอบคุณค่ะ! 😊'); }
     else { alert('🌙 บันทึกในแอปแล้ว '+changes.length+' รายการค่ะ\n📡 บางส่วนส่งขึ้น Google Sheets ไม่สำเร็จ — ระบบเก็บคิวไว้ส่งอัตโนมัติเมื่อเน็ตกลับมา ข้อมูลไม่หายค่ะ (อย่ากรอกซ้ำนะคะ)'); }
+    if(shBtn){ shBtn.disabled=false; shBtn.textContent=shBtn.dataset.orig||'🌙 บันทึกนับท้ายเวร'; }
   });
   updateDashStats(); updateDashLists(); syncACLists(); syncStockTable(); filterStock();
   renderShiftCountList(); renderHist();
@@ -6309,7 +6380,14 @@ function renderHealth(){
     }
   });
 
-  var okCount = ITEMS.length - overs.length - dupCodes.length;
+  // นับ "ปกติ" = จำนวนพัสดุที่ไม่ติดปัญหาจริงข้อใดเลย (นับพัสดุแบบไม่ซ้ำ; opens = ยอดตั้งต้น ไม่ถือเป็นปัญหา)
+  var problemCodes = {};
+  overs.forEach(function(r){ problemCodes[r.item.code]=1; });
+  dupRows.forEach(function(r){ problemCodes[r.item.code]=1; });
+  similar.forEach(function(r){ problemCodes[r.item.code]=1; });
+  sci.forEach(function(r){ problemCodes[r.item.code]=1; });
+  (dupCodes||[]).forEach(function(c){ problemCodes[c]=1; });
+  var okCount = ITEMS.length - Object.keys(problemCodes).length;
   function chip(txt,bg,col){ return '<span style="background:'+bg+';color:'+col+';border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700">'+txt+'</span>'; }
   if(sum) sum.innerHTML =
     chip('✅ ปกติ '+Math.max(0,okCount)+' รายการ','var(--ok-b)','var(--ok-t)')
@@ -6356,8 +6434,10 @@ function renderHealth(){
   }
   if(opens.length){
     h += card('ℹ️ มีของที่ยังไม่ระบุล็อต — ยอดตั้งต้น (ไม่ใช่ข้อผิดพลาด) ('+opens.length+')','var(--g4)',
-      opens.map(function(r){ return '<div style="padding:5px 0;border-bottom:1px solid var(--g1);font-size:12px">'+r.item.name+' — คงเหลือ '+r.item.cur+' = ล็อต '+r.lotSum+' + ไม่ระบุล็อต '+((parseFloat(r.item.cur)||0)-r.lotSum)+'</div>'; }).join(''),
-      'ของเก่าก่อนเริ่มบันทึกล็อต ใช้งานได้ปกติ — อยากให้ครบทุกชิ้นมีล็อต ไปนับสต็อกแล้วกรอกยอดลงล็อตที่ถูกต้องค่ะ');
+      opens.map(function(r){ return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--g1);font-size:12px">'
+        +'<span style="flex:1">'+r.item.name+' — คงเหลือ '+r.item.cur+' = ล็อต '+r.lotSum+' + ไม่ระบุล็อต '+((parseFloat(r.item.cur)||0)-r.lotSum)+'</span>'
+        +'<button class="btn sm" onclick="healthGoCount(\''+r.item.cat.replace(/'/g,"\\'")+'\')">📋 ไปนับสต็อก</button></div>'; }).join(''),
+      'ของเก่าก่อนเริ่มบันทึกล็อต ใช้งานได้ปกติ — อยากให้ครบทุกชิ้นมีล็อต ไปที่หน้านับสต็อก กด "+ เพิ่มล็อต" แล้วกรอกชื่อล็อต · วันหมดอายุ · จำนวน ตามของจริงค่ะ');
   }
   if(!h) h = '<div style="text-align:center;padding:40px;color:var(--ok-t);font-size:15px;font-weight:700">🎉 ข้อมูลสอดคล้องกันทั้งระบบ ไม่พบปัญหาค่ะ</div>';
   res.innerHTML = h;
@@ -6400,13 +6480,44 @@ function wireBoxEntries(scope){
     be.addEventListener('input', function(){
       var row = be.closest('.shift-row') || be.closest('tr');
       if(!row) return;
-      var piece = row.querySelector('.shift-inp') || row.querySelector('.cnt-inp');
+      var piece = row.querySelector('.shift-inp') || row.querySelector('.cnt-inp') || row.querySelector('.cnt-open');
       if(!piece) return;
       var pk = parseInt(be.dataset.pack,10)||1;
       piece.value = (be.value==='') ? '' : String((parseFloat(be.value)||0)*pk);
       piece.dispatchEvent(new Event('input',{bubbles:true}));
     });
   });
+}
+// อัปเดตช่อง "ส่วนต่าง" ของแถวนับ (ยอดรวมนับ − ยอดในระบบ)
+function updCountDiff(tr){
+  if(!tr) return;
+  var item = ITEMS.find(function(i){ return String(i.code) === tr.dataset.code; });
+  var cell = tr.querySelector('.cnt-diff');
+  if(!item || !cell) return;
+  var total = countedTotalFor(item, tr);
+  if(total === null){ cell.textContent='—'; cell.style.color='var(--g4)'; cell.style.fontWeight='400'; return; }
+  var d = total - (parseFloat(item.cur)||0);
+  cell.textContent = (d>0?'+':'')+d+' → '+total;
+  cell.style.fontWeight='700';
+  cell.style.color = d===0 ? 'var(--ok-t)' : (d>0 ? 'var(--nv)' : 'var(--rd-t)');
+}
+// เพิ่มแถว "ล็อตใหม่" ในหน้านับสต็อก — ชื่อล็อต + วันหมดอายุ (ไม่บังคับ) + จำนวน
+// (ขั้นนี้แค่ UI+คำนวณยอดรวม — การบันทึกล็อตใหม่ลงทะเบียนจริงทำในขั้นถัดไป)
+function addCountLot(btn, code){
+  var tr = btn.closest('tr'); if(!tr) return;
+  var wrap = tr.querySelector('.cnt-newlots'); if(!wrap) return;
+  var row = document.createElement('div');
+  row.className = 'cnt-newlot';
+  row.style.cssText = 'display:flex;align-items:center;gap:4px;justify-content:flex-end;margin:2px 0;flex-wrap:wrap';
+  row.innerHTML =
+      '<span style="font-size:10px;color:var(--ok-t);font-weight:600">ล็อตใหม่</span>'
+    + '<input type="text" class="cnt-new-name" placeholder="ชื่อล็อต" style="width:90px;padding:5px;border:1.5px solid var(--li);border-radius:6px;font-family:inherit;font-size:11px">'
+    + '<input type="date" class="cnt-new-exp" title="วันหมดอายุ (ไม่บังคับ)" style="padding:4px;border:1.5px solid var(--g2);border-radius:6px;font-family:inherit;font-size:11px">'
+    + '<input type="number" min="0" class="cnt-new-qty" placeholder="จำนวน" inputmode="numeric" style="width:64px;padding:5px;border:1.5px solid var(--li);border-radius:6px;text-align:center;font-family:inherit">'
+    + '<button type="button" class="cnt-new-del" title="ลบล็อตนี้" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--rd-t);line-height:1">✕</button>';
+  wrap.appendChild(row);
+  row.querySelector('.cnt-new-del').addEventListener('click', function(){ row.remove(); updCountDiff(tr); });
+  var nm = row.querySelector('.cnt-new-name'); if(nm) nm.focus();
 }
 function renderCountTable(){
   var cat = (document.getElementById('count-cat')||{}).value || '';
@@ -6415,90 +6526,122 @@ function renderCountTable(){
   var rows = ITEMS.filter(function(i){ return i.cat === cat; });
   rows.sort(function(a,b){ return String(a.code).localeCompare(String(b.code)); });
   tb.innerHTML = rows.map(function(i){
-    var lots = realLotsOf(i);
-    var inputCell;
-    if(lots.length){
-      // นับแยกรายล็อต — ระบบจะอัปเดตทั้งคงเหลือและทะเบียนล็อตพร้อมกัน
-      var lotSum = lots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); },0);
-      var opening = Math.max(0, (parseFloat(i.cur)||0) - lotSum);
-      inputCell = lots.map(function(L){
-        return '<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin:2px 0">'
-          + '<span style="font-size:10px;color:var(--g4)">'+L.lot+'</span>'
-          + '<input type="number" min="0" class="cnt-lot" data-code="'+i.code+'" data-lot="'+String(L.lot).replace(/"/g,'&quot;')+'" placeholder="'+(parseFloat(L.qty)||0)+'"'
-          + ' style="width:74px;padding:5px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></div>';
-      }).join('');
-      if(opening > 0){
-        inputCell += '<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin:2px 0">'
-          + '<span style="font-size:10px;color:var(--nv)">ไม่ระบุล็อต</span>'
-          + '<input type="number" min="0" class="cnt-lot" data-code="'+i.code+'" data-lot="__open__" placeholder="'+opening+'"'
-          + ' style="width:74px;padding:5px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></div>';
-      }
-    } else {
-      inputCell = '<div style="display:flex;align-items:center;justify-content:flex-end">'
-        + boxEntryHTML(packQty(i))
-        + '<input type="number" min="0" class="cnt-inp" data-code="'+i.code+'" placeholder="'+(i.cur||0)+'" style="width:84px;padding:6px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></div>';
-    }
+    var lots    = realLotsOf(i);
+    var lotSum  = lots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); }, 0);
+    var opening = Math.max(0, (parseFloat(i.cur)||0) - lotSum);
+    var pq = lots.length ? 0 : packQty(i);   // ช่องกล่อง→ชิ้น เฉพาะของที่ยังไม่มีล็อตจริง
+    var cell = '';
+    // ช่องนับรายล็อต "มีชื่อ"
+    lots.forEach(function(L){
+      cell += '<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin:2px 0">'
+        + '<span style="font-size:10px;color:var(--g4)">'+L.lot+'</span>'
+        + '<input type="number" min="0" class="cnt-lot" data-code="'+i.code+'" data-lot="'+String(L.lot).replace(/"/g,'&quot;')+'" placeholder="'+(parseFloat(L.qty)||0)+'"'
+        + ' style="width:74px;padding:5px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></div>';
+    });
+    // ช่อง "ไม่ระบุล็อต (—)" — แสดงเสมอ เพื่อปรับยอดของที่ยังไม่ผูกล็อตได้ทุกเมื่อ
+    cell += '<div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;margin:2px 0">'
+      + '<span style="font-size:10px;color:var(--nv)">ไม่ระบุล็อต (—)</span>'
+      + boxEntryHTML(pq)
+      + '<input type="number" min="0" class="cnt-lot cnt-open" data-code="'+i.code+'" data-lot="__open__" placeholder="'+opening+'"'
+      + ' style="width:74px;padding:5px;border:1.5px solid var(--g2);border-radius:6px;text-align:center;font-family:inherit"></div>';
+    // ที่เก็บล็อตใหม่ที่ผู้ใช้เพิ่มเอง + ปุ่มเพิ่มล็อต
+    cell += '<div class="cnt-newlots"></div>'
+      + '<div style="text-align:right;margin-top:3px"><button type="button" class="btn sm" onclick="addCountLot(this,\''+String(i.code).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="font-size:11px;padding:3px 8px">+ เพิ่มล็อต</button></div>';
     return '<tr data-code="'+i.code+'"><td><span class="cb">'+i.code+'</span></td><td>'+i.name+'</td><td>'+(i.unit||'')+'</td>'
       + '<td style="text-align:center;font-weight:700">'+(i.cur||0)+'</td>'
-      + '<td style="text-align:right">'+inputCell+'</td>'
+      + '<td style="text-align:right">'+cell+'</td>'
       + '<td class="cnt-diff" style="text-align:center;color:var(--g4)">—</td></tr>';
   }).join('');
-  function updDiff(inp){
-    var item = ITEMS.find(function(i){ return String(i.code) === inp.dataset.code; });
-    var tr = inp.closest('tr');
-    var cell = tr ? tr.querySelector('.cnt-diff') : null;
-    if(!item || !cell) return;
-    var total = countedTotalFor(item, tr);
-    if(total === null){ cell.textContent='—'; cell.style.color='var(--g4)'; cell.style.fontWeight='400'; return; }
-    var d = total - (parseFloat(item.cur)||0);
-    cell.textContent = (d>0?'+':'')+d+' → '+total;
-    cell.style.fontWeight='700';
-    cell.style.color = d===0 ? 'var(--ok-t)' : (d>0 ? 'var(--nv)' : 'var(--rd-t)');
+  // ใช้ event delegation ครั้งเดียว — รองรับช่องล็อตใหม่ที่เพิ่มเข้ามาทีหลังด้วย
+  if(!tb._cntWired){
+    tb._cntWired = true;
+    tb.addEventListener('input', function(e){
+      var t = e.target;
+      if(t && t.classList && (t.classList.contains('cnt-lot') || t.classList.contains('cnt-new-qty'))){
+        updCountDiff(t.closest('tr'));
+      }
+    });
   }
-  tb.querySelectorAll('.cnt-inp, .cnt-lot').forEach(function(inp){
-    inp.addEventListener('input', function(){ updDiff(inp); });
-  });
   wireBoxEntries(tb);
 }
-// ยอดนับรวมของแถว: ช่องที่เว้นว่าง = ใช้ยอดเดิมของล็อตนั้น · คืน null ถ้าไม่ได้กรอกอะไรเลย
+// ยอดนับรวมของแถว: ช่องที่เว้นว่าง = ใช้ยอดเดิมของล็อตนั้น · รวมช่อง "ไม่ระบุล็อต (—)" และล็อตใหม่ที่เพิ่มเข้ามาด้วย · คืน null ถ้าไม่ได้กรอกอะไรเลย
 function countedTotalFor(item, tr){
-  var lotInps = tr.querySelectorAll('.cnt-lot');
-  if(lotInps.length){
-    var any=false, total=0;
-    lotInps.forEach(function(li){
-      var cur = (li.dataset.lot==='__open__')
-        ? Math.max(0,(parseFloat(item.cur)||0) - realLotsOf(item).reduce(function(s,L){return s+(parseFloat(L.qty)||0);},0))
-        : (function(){ var L=realLotsOf(item).find(function(x){return String(x.lot)===li.dataset.lot;}); return L?(parseFloat(L.qty)||0):0; })();
-      if(li.value!==''){ any=true; total += Math.max(0,parseFloat(li.value)||0); }
-      else total += cur;
-    });
-    return any ? total : null;
-  }
-  var inp = tr.querySelector('.cnt-inp');
-  return (inp && inp.value!=='') ? Math.max(0,parseFloat(inp.value)||0) : null;
+  var realLots = realLotsOf(item);
+  var lotSum = realLots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); }, 0);
+  var any=false, total=0;
+  // ช่องล็อตมีชื่อ + ช่องไม่ระบุล็อต (__open__): เว้นว่าง = ใช้ยอดเดิมของล็อตนั้น
+  tr.querySelectorAll('.cnt-lot').forEach(function(li){
+    var baseline = (li.dataset.lot==='__open__')
+      ? Math.max(0, (parseFloat(item.cur)||0) - lotSum)
+      : (function(){ var L=realLots.find(function(x){ return String(x.lot)===li.dataset.lot; }); return L?(parseFloat(L.qty)||0):0; })();
+    if(li.value!==''){ any=true; total += Math.max(0,parseFloat(li.value)||0); }
+    else total += baseline;
+  });
+  // ล็อตใหม่ที่ผู้ใช้เพิ่มเอง — นับเฉพาะช่องที่กรอกจำนวน
+  tr.querySelectorAll('.cnt-new-qty').forEach(function(q){
+    if(q.value!==''){ any=true; total += Math.max(0,parseFloat(q.value)||0); }
+  });
+  return any ? total : null;
 }
 
 function saveStockCount(){
   if(typeof denyNonAdmin==='function' && denyNonAdmin()) return;
   var changes = [];
+  var errs = [];
   document.querySelectorAll('#count-tbody tr[data-code]').forEach(function(tr){
     var item = ITEMS.find(function(i){ return String(i.code) === tr.dataset.code; });
     if(!item) return;
     var counted = countedTotalFor(item, tr);
-    if(counted === null) return;   // ไม่ได้กรอกแถวนี้
-    // เก็บยอดนับรายล็อต (เฉพาะช่องที่กรอก) เพื่อ sync ทะเบียนล็อตให้ตรงด้วย
+    // เก็บยอดนับรายล็อต "มีชื่อ" (เฉพาะช่องที่กรอก) เพื่อ sync ทะเบียนล็อตให้ตรงด้วย
     var lotCounts = [];
     tr.querySelectorAll('.cnt-lot').forEach(function(li){
       if(li.value==='' || li.dataset.lot==='__open__') return;
       lotCounts.push({ lot: li.dataset.lot, counted: Math.max(0,parseFloat(li.value)||0) });
     });
-    if(counted !== (parseFloat(item.cur)||0) || lotCounts.length) changes.push({ item:item, counted:counted, lotCounts:lotCounts });
+    // อ่าน "ล็อตใหม่" ที่ผู้ใช้เพิ่มเอง + ตรวจสอบก่อนบันทึก
+    var newLots = [];
+    var existNames = realLotsOf(item).map(function(L){ return String(L.lot).trim(); });
+    var seen = {};
+    tr.querySelectorAll('.cnt-newlot').forEach(function(row){
+      var nmEl = row.querySelector('.cnt-new-name');
+      var qEl  = row.querySelector('.cnt-new-qty');
+      var exEl = row.querySelector('.cnt-new-exp');
+      var name = nmEl ? nmEl.value.trim() : '';
+      var qstr = qEl ? qEl.value : '';
+      var qty  = Math.max(0, parseFloat(qstr)||0);
+      if(qstr==='' || qty<=0) return;   // ไม่กรอกจำนวน = ข้าม (ไม่ลงทะเบียน)
+      if(!name){ errs.push('• '+item.name+': มีล็อตใหม่กรอกจำนวน '+qty+' แต่ยังไม่ได้ตั้งชื่อล็อต'); return; }
+      if(existNames.indexOf(name)!==-1){ errs.push('• '+item.name+': ชื่อล็อตใหม่ "'+name+'" ซ้ำกับล็อตที่มีอยู่แล้ว — ให้ไปนับที่ช่องล็อตนั้นแทนค่ะ'); return; }
+      if(seen[name]){ errs.push('• '+item.name+': ใส่ชื่อล็อตใหม่ "'+name+'" ซ้ำกันหลายแถว'); return; }
+      seen[name] = 1;
+      newLots.push({ lot:name, qty:qty, exp:(exEl && exEl.value) ? exEl.value : '' });
+    });
+    if(counted === null && !newLots.length) return;   // ไม่ได้กรอกแถวนี้เลย
+    var cur = parseFloat(item.cur)||0;
+    var total = (counted===null) ? cur : counted;     // counted รวมล็อตใหม่ไว้แล้วถ้ามีการกรอกช่องใดๆ
+    if(total !== cur || lotCounts.length || newLots.length) changes.push({ item:item, counted:total, lotCounts:lotCounts, newLots:newLots });
   });
+  if(errs.length){ alert('❌ กรุณาแก้ล็อตใหม่ให้เรียบร้อยก่อนบันทึกนะคะ:\n\n'+errs.join('\n')); return; }
   if(!changes.length){ alert('ไม่มีรายการที่ยอดต่างจากระบบค่ะ'); return; }
-  var lines = changes.map(function(c){ return '• ' + c.item.name + ': ' + c.item.cur + ' → ' + c.counted; });
+  // เพดานจำนวน — กันนับ/ปรับยอดเกินจริง (พิมพ์ผิด/สแกนเพี้ยน)
+  var scQtyBlock=[], scQtyWarn=[];
+  changes.forEach(function(c){
+    var f=qtyFlag(c.counted, c.item);
+    if(f==='block') scQtyBlock.push('• '+c.item.name+' — นับได้ '+c.counted);
+    else if(f==='warn') scQtyWarn.push('• '+c.item.name+' — นับได้ '+c.counted);
+  });
+  if(scQtyBlock.length){ alert('❌ จำนวนมากผิดปกติจนน่าจะพิมพ์ผิด (เกิน '+QTY_HARD_CAP+') — บันทึกไม่ได้ค่ะ\n\n'+scQtyBlock.join('\n')); return; }
+  if(scQtyWarn.length && !confirm('⚠️ ยอดนับต่อไปนี้มากผิดปกติ ยืนยันว่าถูกต้องไหมคะ?\n\n'+scQtyWarn.join('\n'))) return;
+  var lines = changes.map(function(c){
+    var extra = c.newLots.length ? (' [+ล็อตใหม่ '+c.newLots.map(function(n){ return n.lot+'×'+n.qty; }).join(', ')+']') : '';
+    return '• ' + c.item.name + ': ' + c.item.cur + ' → ' + c.counted + extra;
+  });
   if(!confirm('ยืนยันปรับยอด ' + changes.length + ' รายการตามการตรวจนับ:\n\n' + lines.slice(0,12).join('\n')
-    + (lines.length > 12 ? '\n... (อีก ' + (lines.length-12) + ' รายการ)' : '') + '\n\nจะบันทึกลงประวัติเป็น "ปรับยอด" และอัปเดตทะเบียนล็อตให้ตรงกันค่ะ')) return;
+    + (lines.length > 12 ? '\n... (อีก ' + (lines.length-12) + ' รายการ)' : '') + '\n\nจะบันทึกลงประวัติเป็น "ปรับยอด" และอัปเดตทะเบียนล็อต (รวมล็อตใหม่) ให้ตรงกันค่ะ')) return;
 
+  // กันกดซ้ำ (double-submit) — ปิดปุ่มระหว่างส่ง
+  var cntBtn = document.querySelector('#pg-count button[onclick*="saveStockCount"]');
+  if(cntBtn){ cntBtn.disabled = true; cntBtn.dataset.orig = cntBtn.textContent; cntBtn.textContent = '⏳ กำลังบันทึก...'; }
   var now = new Date();
   var user = document.getElementById('sbn').textContent || 'พยาบาล';
   var syncPromises = [];
@@ -6506,11 +6649,13 @@ function saveStockCount(){
     var item = c.item;
     var oldStock = parseFloat(item.cur)||0, diff = c.counted - oldStock;
     item.cur = c.counted;
-    var lotNote = c.lotCounts.map(function(lc){ return lc.lot+'='+lc.counted; }).join(', ');
+    var lotNote = c.lotCounts.map(function(lc){ return lc.lot+'='+lc.counted; })
+                    .concat(c.newLots.map(function(nl){ return nl.lot+'='+nl.qty+' (ใหม่)'; })).join(', ');
     TXLOG.unshift({ date: thaiDate(now), rawDate: now, type: 'adj', name: item.name, code: item.code, lot: lotNote||'—', qty: diff, unit: item.unit, oldStock: oldStock, newStock: c.counted, user: user });
-    syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: thaiDate(now), type: 'ปรับยอด', code: item.code, name: item.name, qty: diff, remaining: c.counted, lot: lotNote||'—', user: user, note: 'ตรวจนับสต็อก' + (lotNote?' (รายล็อต)':'') }, 'ประวัติปรับยอด: '+item.name));
+    syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: thaiDate(now), type: 'ปรับยอด', code: item.code, name: item.name, qty: diff, remaining: c.counted, lot: lotNote||'—', user: user, note: 'ตรวจนับสต็อก' + ((c.lotCounts.length||c.newLots.length)?' (รายล็อต)':'') }, 'ประวัติปรับยอด: '+item.name));
     if(item.code && item.code !== '—'){
-      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'updateStock', code: item.code, cur: c.counted }, 'ยอดคงเหลือ: '+item.name));
+      // ★ ใช้ adjustStock (ส่วนต่าง + lock + txId) แทน updateStock (เซ็ตทั้งก้อน) — กันเขียนทับยอดคนอื่นที่เบิกพร้อมกัน + ปลอดภัยเมื่อรีเพลย์คิว
+      if(diff !== 0) syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'adjustStock', code: item.code, delta: diff }, 'ยอดคงเหลือ: '+item.name));
       // sync ทะเบียนล็อต: ส่งส่วนต่างของแต่ละล็อตที่นับ (เพิ่ม = upsertLot, ลด = deductLot)
       c.lotCounts.forEach(function(lc){
         var L = realLotsOf(item).find(function(x){ return String(x.lot)===lc.lot; });
@@ -6520,6 +6665,13 @@ function saveStockCount(){
         else if(d < 0) syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action:'deductLot', code:item.code, name:item.name, lot:lc.lot, qty:-d }, 'ปรับล็อต: '+item.name+' '+lc.lot));
         if(L) L.qty = lc.counted;
       });
+      // ล็อตใหม่ — สร้างแถวใหม่ในทะเบียน (พร้อมวันหมดอายุ) + เพิ่มเข้ารายการในแอปทันที
+      var today = thaiDate(now);
+      c.newLots.forEach(function(nl){
+        syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action:'upsertLot', code:item.code, name:item.name, lot:nl.lot, qty:nl.qty, recv:today, exp:nl.exp||'' }, 'เพิ่มล็อตใหม่: '+item.name+' '+nl.lot));
+        item.lots = item.lots || [];
+        item.lots.push({ lot:nl.lot, recv:today, exp:nl.exp||'—', qty:nl.qty });
+      });
       // ล็อตที่นับได้ 0 — เอาออกจากรายการในแอปด้วย
       item.lots = (item.lots||[]).filter(function(x){ return (parseFloat(x.qty)||0) > 0 || x.lot==='—' || x.lot==='-'; });
     }
@@ -6528,6 +6680,7 @@ function saveStockCount(){
     var allOk = results.every(function(ok){ return ok; });
     if(allOk){ alert('✅ ปรับยอด ' + changes.length + ' รายการ และบันทึกลง Google Sheets เรียบร้อยค่ะ'); }
     else { alert('✅ ปรับยอด ' + changes.length + ' รายการในแอปแล้วค่ะ\n📡 มีบางส่วนส่งขึ้น Google Sheets ไม่สำเร็จ (เน็ตไม่เสถียร) — ระบบเก็บไว้ในคิวและจะส่งให้อัตโนมัติเมื่อเน็ตกลับมา ข้อมูลไม่หายค่ะ\n\n❗ ไม่ต้องกรอกซ้ำนะคะ — ดูสถานะได้ที่ป้ายมุมขวาล่าง'); }
+    if(cntBtn){ cntBtn.disabled = false; cntBtn.textContent = cntBtn.dataset.orig || '💾 บันทึกการปรับยอด'; }
   });
   renderStockTable();
   renderCountTable();
