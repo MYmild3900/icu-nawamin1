@@ -3669,19 +3669,31 @@ function selectWdItem(el, code){
   var lotList  = container.querySelector('.lot-options-list');
   if(!lotWrap || !lotList) return;
 
-  if(!item.lots || item.lots.length===0){
+  // สร้างรายการล็อตสำหรับเบิก: ล็อต "มีชื่อ" (qty>0 ตามลำดับ FEFO เดิม) + "ไม่ระบุล็อต (—)" ที่คำนวณจาก cur
+  // คำนวณ — แบบเดียวกับหน้านับสต็อก (cur − ผลรวมล็อตมีชื่อ) — ไม่อ่านล็อต "—" ที่เก็บในทะเบียน (ซึ่งอาจดริฟต์ไม่ตรง cur)
+  // → หน้าเบิกกับหน้านับสต็อกแสดงตรงกันเสมอ
+  var namedLots = (item.lots||[]).filter(function(L){ return L.lot && L.lot!=='—' && L.lot!=='-' && (parseFloat(L.qty)||0) > 0; });
+  var curNum = parseFloat(item.cur)||0;
+  var namedSum = namedLots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); }, 0);
+  var openQty = Math.max(0, curNum - namedSum);
+  var wdLots = namedLots.slice();
+  if(openQty > 0) wdLots.push({ lot:'—', recv:'—', exp:'—', qty:openQty });
+
+  if(wdLots.length===0){
     lotList.innerHTML='<div style="font-size:11px;color:var(--g4);padding:6px">ไม่มีข้อมูล Lot ค่ะ</div>';
     lotWrap.style.display='block';
     return;
   }
 
   lotList.innerHTML='';
-  item.lots.forEach(function(l, idx){
+  wdLots.forEach(function(l, idx){
     var isFirst = idx===0;
     var div = document.createElement('div');
     div.className='lot-option' + (isFirst?' selected':'');
     div.dataset.lot = l.lot;
     div.dataset.idx = idx;
+    div.dataset.exp = l.exp;
+    div.dataset.qty = l.qty;
     div.onclick = function(){ selectLot(this, item, idx); };
 
     var badge = isFirst
@@ -3700,41 +3712,29 @@ function selectWdItem(el, code){
     lotList.appendChild(div);
   });
 
-  // เตือนเฉพาะความผิดปกติจริง — นับเฉพาะล็อต "มีชื่อ" (ตัดล็อต —/-/ว่าง ที่เป็นของไม่ระบุล็อต) ให้ตรงเกณฑ์หน้า health (ดู index.html:6291-6297)
-  //   • ผลรวมล็อตมีชื่อ > คงเหลือ  → ผิดปกติจริง (ยอดไม่ระบุล็อตจะติดลบ) → เตือน ⚠️ ชวนไปนับสต็อก
-  //   • คงเหลือ ≥ ผลรวมล็อตมีชื่อ → ปกติ (มีของไม่ระบุล็อตอยู่) → แสดงข้อความเฉยๆ ไม่ชวนไปนับ (กันลูปวนนับสต็อก)
-  var isBlankLot = function(n){ return !n || n==='—' || n==='-'; };
-  var namedLotSum = item.lots.reduce(function(s,L){ return isBlankLot(L.lot) ? s : s+(parseFloat(L.qty)||0); }, 0);
-  var curNum = parseFloat(item.cur)||0;
-  if(namedLotSum > curNum){
+  // เตือนเฉพาะความผิดปกติจริง: ผลรวมล็อตมีชื่อ > คงเหลือ (ยอดไม่ระบุล็อตจะติดลบ) → ชวนไปนับสต็อก
+  // (กรณีปกติ cur ≥ ล็อตมีชื่อ ไม่ต้องเตือน — ของไม่ระบุล็อตแสดงเป็นตัวเลือก "—" ให้แล้ว)
+  if(namedSum > curNum){
     var mw = document.createElement('div');
     mw.style.cssText='margin-top:6px;padding:7px 10px;border-radius:var(--r4);background:var(--wn-b);border:1px solid #fde68a;font-size:11px;color:var(--wn-t);font-weight:600';
-    mw.textContent = '⚠️ ยอดรวมล็อตมีชื่อ ('+namedLotSum+') มากกว่าคงเหลือ ('+curNum+' '+item.unit+') — แนะนำตรวจนับจริงแล้วปรับยอดที่หน้า "นับสต็อก" ค่ะ';
-    lotList.appendChild(mw);
-  } else if(curNum > namedLotSum){
-    var mw = document.createElement('div');
-    mw.style.cssText='margin-top:6px;padding:7px 10px;border-radius:var(--r4);background:var(--g1);border:1px solid var(--g2);font-size:11px;color:var(--g5)';
-    mw.textContent = 'ℹ️ มีของ '+(curNum-namedLotSum)+' '+item.unit+' ที่ยังไม่ระบุล็อต (ยอดตั้งต้นก่อนเริ่มบันทึกล็อต)';
+    mw.textContent = '⚠️ ยอดรวมล็อตมีชื่อ ('+namedSum+') มากกว่าคงเหลือ ('+curNum+' '+item.unit+') — แนะนำตรวจนับจริงแล้วปรับยอดที่หน้า "นับสต็อก" ค่ะ';
     lotList.appendChild(mw);
   }
 
   lotWrap.style.display='block';
-  // default เลือก lot แรก
-  container.dataset.selectedLot = item.lots[0].lot;
+  // default เลือก lot แรก (FEFO)
+  container.dataset.selectedLot = wdLots[0].lot;
   container.dataset.selectedLotIdx = '0';
 }
 
 function selectLot(el, item, idx){
   var container = el.closest('.wd-item-row');
   // Poka-Yoke แบบเข้ม: เลือกข้ามล็อตที่หมดอายุก่อน ต้องยืนยันก่อน ไม่งั้นดีดกลับล็อตแรก
-  if(idx > 0 && item.lots && item.lots[0]){
-    var fl = item.lots[0];
-    var okSkip = confirm('⚠️ ตามหลัก FEFO ควรใช้ล็อต ' + fl.lot + ' ก่อน\n(หมดอายุ ' + fmtExp(fl.exp) + ' · เหลือ ' + fl.qty + ' ' + (item.unit||'') + ')\n\nยืนยันจะเบิกล็อต ' + (el.dataset.lot||'') + ' แทนใช่ไหมคะ?');
-    if(!okSkip){
-      var firstEl = container.querySelector('.lot-option');
-      if(firstEl && firstEl !== el){ selectLot(firstEl, item, 0); }
-      return;
-    }
+  // อ้าง "ล็อตแรก" จากตัวเลือกที่แสดงจริง (ไม่พึ่ง item.lots[0] ที่อาจดริฟต์)
+  var firstEl = container.querySelector('.lot-option');
+  if(idx > 0 && firstEl && firstEl !== el){
+    var okSkip = confirm('⚠️ ตามหลัก FEFO ควรใช้ล็อต ' + firstEl.dataset.lot + ' ก่อน\n(หมดอายุ ' + fmtExp(firstEl.dataset.exp) + ' · เหลือ ' + firstEl.dataset.qty + ' ' + (item.unit||'') + ')\n\nยืนยันจะเบิกล็อต ' + (el.dataset.lot||'') + ' แทนใช่ไหมคะ?');
+    if(!okSkip){ selectLot(firstEl, item, 0); return; }
   }
   // อัปเดต UI
   container.querySelectorAll('.lot-option').forEach(function(o){ o.classList.remove('selected'); });
@@ -3745,9 +3745,8 @@ function selectLot(el, item, idx){
   // Poka-Yoke: เตือนถ้าเลือกไม่ใช่ lot แรก
   var warn = container.querySelector('.poka-warn');
   var warnMsg = container.querySelector('.poka-warn-msg');
-  if(idx > 0 && warn && warnMsg){
-    var firstLot = item.lots[0];
-    warnMsg.textContent = 'ยังมี '+firstLot.lot+' (หมด '+fmtExp(firstLot.exp)+', เหลือ '+firstLot.qty+' '+item.unit+') ที่ควรใช้ก่อนค่ะ';
+  if(idx > 0 && warn && warnMsg && firstEl){
+    warnMsg.textContent = 'ยังมี '+firstEl.dataset.lot+' (หมด '+fmtExp(firstEl.dataset.exp)+', เหลือ '+firstEl.dataset.qty+' '+item.unit+') ที่ควรใช้ก่อนค่ะ';
     warn.classList.add('show');
   } else if(warn){
     warn.classList.remove('show');
