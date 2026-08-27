@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MY's Money 💰</title>
+<meta name="theme-color" content="#8a5fc2">
+<meta name="apple-mobile-web-app-title" content="MY's Money">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="application-name" content="MY's Money">
+<link rel="manifest" href="./money.webmanifest">
+<link rel="apple-touch-icon" href="./icon-money-192.png">
+<link rel="icon" type="image/png" href="./icon-money-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nv:#8a5fc2;--nv2:#a982d6;--bl:#FBE7F3;--bg:#FAF5FC;--li:#F4A6C0;--li2:#e07fa3;
+  --g0:#f7f2fb;--g1:#eee6f5;--g2:#e0d4ec;--g4:#a99bb8;--g5:#7d7090;--g7:#4b4159;--wt:#fffdff;
+  --ok-b:#d7f5e3;--ok-t:#1f7a4d;--ok-d:#34c77b;
+  --wn-b:#fdf0c9;--wn-t:#9a7016;--wn-d:#f0b429;
+  --rd-b:#fde0ea;--rd-t:#b04270;--rd-d:#ef6b8f;
+  --bl-b:#dcecfb;--bl-t:#2b6cb0;--bl-d:#5b9bd5;
+  --pk-b:#FCE0EE;--pk-t:#c25b8a;
+  --r8:10px;--r12:14px;--r16:22px;--sh:0 2px 8px rgba(150,110,190,.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Sarabun',sans-serif;font-size:14px;color:var(--g7);background:var(--bg)}
+button,input,select,textarea{font-family:inherit}
+.mali{font-family:'Mali',cursive}
+.wrap{max-width:1080px;margin:0 auto;padding:0 12px 90px}
+
+.hd{background:linear-gradient(115deg,#F7B2B7 0%,#FBD1A2 20%,#FCEFA4 38%,#B7E7C0 57%,#A9D6F0 77%,#C9B3E8 100%);
+  color:var(--g7);padding:15px 18px;border-radius:0 0 var(--r16) var(--r16);box-shadow:var(--sh);
+  display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
+.hd>*{position:relative;z-index:1}
+.hd::after{content:"💸";position:absolute;right:-2px;bottom:-12px;font-size:64px;opacity:.28;transform:rotate(-10deg);z-index:0;pointer-events:none}
+.hd .emo{font-size:30px;background:rgba(255,255,255,.6);width:46px;height:46px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 3px rgba(150,110,190,.2)}
+.hd h1{font-size:19px;font-weight:700;line-height:1.15;text-shadow:0 1px 1px rgba(255,255,255,.55)}
+.hd .sub{font-size:11px;color:var(--g5);margin-top:1px;font-weight:500}
+
+.tabs{display:flex;gap:4px;margin:14px 0;flex-wrap:wrap}
+.tab{padding:8px 14px;background:var(--wt);border:1.5px solid var(--g2);border-radius:var(--r8);
+  font-size:13px;font-weight:600;color:var(--g5);cursor:pointer;transition:.12s}
+.tab:hover{border-color:var(--li)}
+.tab.on{background:var(--nv);border-color:var(--nv);color:#fff}
+
+.card{background:var(--wt);border-radius:var(--r12);box-shadow:var(--sh);padding:16px;margin-bottom:14px}
+.card h2{font-size:15px;font-weight:700;color:var(--nv);margin-bottom:2px;display:flex;align-items:center;gap:6px}
+.card .desc{font-size:12px;color:var(--g4);margin-bottom:12px}
+
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{padding:8px 14px;border-radius:var(--r8);border:1.5px solid var(--g2);background:var(--wt);
+  font-size:13px;font-weight:600;color:var(--g7);cursor:pointer;transition:.12s}
+.btn:hover{border-color:var(--li)}
+.btn.pri{background:var(--nv);border-color:var(--nv);color:#fff}
+.btn.pri:hover{background:var(--nv2)}
+.btn.ok{background:var(--ok-d);border-color:var(--ok-d);color:#fff}
+.btn.dl{color:var(--rd-t);border-color:#f3c4c4;background:var(--wt)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn.xs{padding:3px 8px;font-size:11px}
+input[type=text],input[type=date],input[type=month],input[type=number],select,textarea{padding:8px 11px;
+  border:1.5px solid var(--g2);border-radius:var(--r8);font-size:13px;color:var(--g7);outline:none;background:var(--wt);width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--li)}
+label.fld{font-size:11px;font-weight:600;color:var(--g5);display:block;margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.field{margin-bottom:10px}
+
+/* month nav */
+.mnav{display:flex;align-items:center;gap:8px;justify-content:center}
+.mnav button.arrow{width:34px;height:34px;border-radius:var(--r8);border:1.5px solid var(--g2);
+  background:var(--wt);font-size:16px;cursor:pointer;color:var(--nv)}
+.mnav button.arrow:hover{border-color:var(--li)}
+.mtitle{font-size:16px;font-weight:700;color:var(--nv);line-height:1.1;min-width:150px;text-align:center}
+
+/* stat cards */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--wt);border-radius:var(--r12);padding:12px 14px;box-shadow:var(--sh);border-left:5px solid var(--g2)}
+.stat.in{border-color:var(--ok-d)}.stat.out{border-color:var(--rd-d)}.stat.net{border-color:var(--nv)}
+.stat.save{border-color:var(--bl-d)}.stat.inv{border-color:var(--wn-d)}.stat.wor{border-color:var(--nv)}
+.stat .lb{font-size:11px;color:var(--g4);font-weight:600;margin-bottom:3px}
+.stat .nm{font-size:19px;font-weight:700;line-height:1.1}
+.stat .sb{font-size:10px;color:var(--g4);margin-top:2px}
+.stat.in .nm{color:var(--ok-t)}.stat.out .nm{color:var(--rd-t)}.stat.net .nm{color:var(--nv)}
+.stat.save .nm{color:var(--bl-t)}.stat.inv .nm{color:var(--wn-t)}.stat.wor .nm{color:var(--nv)}
+
+/* txn list */
+.tlist{margin-top:6px}
+.dgrp{margin-bottom:10px}
+.dgrp .dh{font-size:12px;font-weight:700;color:var(--g5);padding:4px 2px;border-bottom:1.5px dashed var(--g2);
+  margin-bottom:5px;display:flex;justify-content:space-between}
+.tx{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--g1)}
+.tx:last-child{border-bottom:none}
+.tx .ic{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:17px;flex-shrink:0;background:var(--g0)}
+.tx .info{flex:1;min-width:0}
+.tx .cat{font-weight:600;font-size:13px}
+.tx .note{font-size:11px;color:var(--g4)}
+.tx .amt{font-weight:700;font-size:14px;white-space:nowrap}
+.tx .amt.in{color:var(--ok-t)}.tx .amt.out{color:var(--rd-t)}
+.tx .del{background:none;border:none;color:var(--g4);cursor:pointer;font-size:15px;padding:2px 4px}
+.tx .del:hover{color:var(--rd-t)}
+.empty{text-align:center;color:var(--g4);font-size:13px;padding:24px 10px}
+.empty .e{font-size:34px;display:block;margin-bottom:6px;opacity:.7}
+
+/* pill toggles */
+.pills{display:flex;gap:6px}
+.pill{flex:1;padding:9px;border-radius:var(--r8);border:1.5px solid var(--g2);background:var(--wt);
+  font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:.12s;color:var(--g5)}
+.pill.selin.on{background:var(--ok-d);border-color:var(--ok-d);color:#fff}
+.pill.selout.on{background:var(--rd-d);border-color:var(--rd-d);color:#fff}
+
+/* chips (category quick pick) */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{padding:5px 11px;border-radius:20px;border:1.5px solid var(--g2);background:var(--wt);
+  font-size:12px;cursor:pointer;color:var(--g5);transition:.1s;font-weight:600}
+.chip:hover{border-color:var(--li)}
+.chip.on{background:var(--li);border-color:var(--li);color:#fff}
+
+/* progress */
+.pot{border:1.5px solid var(--g1);border-radius:var(--r12);padding:12px;margin-bottom:10px}
+.pot .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.pot .pn{font-weight:700;font-size:14px}
+.pot .pv{font-size:12px;color:var(--g5)}
+.bar{height:12px;background:var(--g1);border-radius:20px;overflow:hidden;margin:6px 0}
+.bar>i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#B7E7C0,#A9D6F0,#C9B3E8);transition:width .4s}
+.pot .pct{font-size:11px;color:var(--g4);text-align:right}
+.pot .acts{display:flex;gap:6px;margin-top:8px}
+
+/* investment / loan rows */
+.holds{margin-top:6px}
+.hold{border:1.5px solid var(--g1);border-radius:var(--r12);padding:12px;margin-bottom:10px}
+.hold .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.hold .hn{font-weight:700;font-size:14px}
+.hold .htag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px;background:var(--g0);color:var(--g5)}
+.hold .hnums{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;font-size:12px}
+.hold .hnums div span{display:block;font-size:10px;color:var(--g4)}
+.hold .hnums div b{font-size:14px;font-weight:700}
+.up{color:var(--ok-t)}.down{color:var(--rd-t)}
+/* loan detail */
+.loanbig{font-size:13px;color:var(--g5);margin:9px 0 3px}
+.loanbig b{font-size:23px;font-weight:700;margin-left:5px;color:var(--rd-t)}
+.loanfoot{font-size:11.5px;color:var(--g5);margin-top:9px;line-height:1.65;background:var(--g0);padding:9px 11px;border-radius:var(--r8)}
+.loanfoot b{color:var(--g7)}
+.splitrow{display:flex;gap:8px;margin-top:7px}
+.splitrow>div{flex:1;text-align:center;padding:7px 4px;border-radius:var(--r8);font-size:11px}
+.splitrow .si{background:var(--rd-b);color:var(--rd-t)}
+.splitrow .sp{background:var(--ok-b);color:var(--ok-t)}
+.splitrow b{display:block;font-size:14px;margin-top:1px}
+.levbadge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:6px}
+.levbadge.ok{background:var(--ok-b);color:var(--ok-t)}.levbadge.bad{background:var(--rd-b);color:var(--rd-t)}
+.levsum{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:9px 0 4px;font-size:11px}
+.levsum div{background:var(--g0);border-radius:var(--r8);padding:7px 9px}
+.levsum span{display:block;font-size:10px;color:var(--g4)}
+.levsum b{font-size:14px}
+.levline{font-size:12px;color:var(--g7);margin-top:8px;background:var(--bl-b);padding:9px 11px;border-radius:var(--r8);line-height:1.55}
+.levline.warn{background:var(--wn-b);color:var(--wn-t)}
+
+/* chart */
+.chart{width:100%;height:auto;overflow:visible}
+.legend{display:flex;gap:14px;justify-content:center;font-size:11px;color:var(--g5);margin-top:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.catbars{margin-top:4px}
+.catrow{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12px}
+.catrow .cl{width:96px;flex-shrink:0;color:var(--g5);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catrow .cb{flex:1;height:14px;background:var(--g1);border-radius:20px;overflow:hidden}
+.catrow .cb>i{display:block;height:100%;background:linear-gradient(90deg,var(--li),var(--nv2));border-radius:20px}
+.catrow .cv{width:92px;text-align:right;flex-shrink:0;font-weight:600;color:var(--g7)}
+
+.hint{font-size:11px;color:var(--g4);margin-top:8px;line-height:1.5}
+.divider{height:1px;background:var(--g1);margin:14px 0}
+.foot{text-align:center;font-size:11px;color:var(--g4);margin-top:16px}
+.pg{display:none}.pg.on{display:block}
+@media(max-width:640px){
+  .grid3{grid-template-columns:1fr 1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .hold .hnums{grid-template-columns:1fr 1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="hd">
+  <div class="emo">💰</div>
+  <div>
+    <h1 class="mali">MY's Money</h1>
+    <div class="sub">รายรับรายจ่าย · เงินออม · ลงทุน · สหกรณ์ 🎀</div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab on" data-tab="over">📊 ภาพรวม</div>
+    <div class="tab" data-tab="daily">💵 รายวัน</div>
+    <div class="tab" data-tab="save">🐷 เงินออม</div>
+    <div class="tab" data-tab="inv">📈 ลงทุน</div>
+    <div class="tab" data-tab="coop">🏦 สหกรณ์</div>
+    <div class="tab" data-tab="data">⚙️ ข้อมูล</div>
+  </div>
+
+  <!-- ============ ภาพรวม ============ -->
+  <div class="pg on" id="pg-over">
+    <div class="card">
+      <div class="mnav">
+        <button class="arrow" onclick="shiftMonth(-1)">‹</button>
+        <div class="mtitle" id="ovMonth"></div>
+        <button class="arrow" onclick="shiftMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat in"><div class="lb">รายรับเดือนนี้</div><div class="nm" id="ovIn">฿0</div></div>
+      <div class="stat out"><div class="lb">รายจ่ายเดือนนี้</div><div class="nm" id="ovOut">฿0</div></div>
+      <div class="stat net"><div class="lb">คงเหลือ (รับ−จ่าย)</div><div class="nm" id="ovNet">฿0</div></div>
+    </div>
+    <div class="stats">
+      <div class="stat save"><div class="lb">เงินออมรวม 🐷</div><div class="nm" id="ovSave">฿0</div></div>
+      <div class="stat inv"><div class="lb">พอร์ตลงทุน 📈</div><div class="nm" id="ovInv">฿0</div><div class="sb" id="ovInvSb"></div></div>
+      <div class="stat wor"><div class="lb">มูลค่าสุทธิ (Net worth)</div><div class="nm" id="ovWorth">฿0</div><div class="sb">รวมทรัพย์สิน − หนี้สหกรณ์</div></div>
+    </div>
+
+    <div class="card">
+      <h2>📉 รายรับ vs รายจ่าย (6 เดือนล่าสุด)</h2>
+      <svg class="chart" id="barChart" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="legend"><span><i style="background:var(--ok-d)"></i>รายรับ</span><span><i style="background:var(--rd-d)"></i>รายจ่าย</span></div>
+    </div>
+
+    <div class="card">
+      <h2>🧁 รายจ่ายแยกหมวด (เดือนนี้)</h2>
+      <div class="catbars" id="catBars"></div>
+    </div>
+  </div>
+
+  <!-- ============ รายวัน ============ -->
+  <div class="pg" id="pg-daily">
+    <div class="card">
+      <h2>➕ บันทึกรายการ</h2>
+      <div class="field">
+        <div class="pills">
+          <div class="pill selout on" id="pOut" onclick="setTxType('out')">💸 รายจ่าย</div>
+          <div class="pill selin" id="pIn" onclick="setTxType('in')">💵 รายรับ</div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label class="fld">วันที่</label><input type="date" id="txDate"></div>
+        <div class="field"><label class="fld">จำนวนเงิน (บาท)</label><input type="number" id="txAmt" inputmode="decimal" placeholder="0" min="0" step="0.01"></div>
+      </div>
+      <div class="field">
+        <label class="fld">หมวดหมู่</label>
+        <div class="chips" id="txChips"></div>
+        <input type="text" id="txCat" placeholder="หรือพิมพ์หมวดเอง" style="margin-top:6px">
+      </div>
+      <div class="field"><label class="fld">โน้ต (ถ้ามี)</label><input type="text" id="txNote" placeholder="เช่น ข้าวเที่ยง, ค่าเวร OT"></div>
+      <button class="btn pri" style="width:100%" onclick="addTx()">💾 บันทึกรายการ</button>
+    </div>
+
+    <div class="card">
+      <h2>🔁 รายการประจำ (หักอัตโนมัติทุกเดือน)</h2>
+      <div class="desc">ค่าที่หักเท่ากันทุกเดือน เช่น เบี้ยประกัน หุ้นสหกรณ์ ค่าเน็ต — เปิดแอปแต่ละเดือนระบบลงให้เอง ไม่ต้องพิมพ์ซ้ำ</div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ชื่อรายการ</label><input type="text" id="rcName" placeholder="เช่น เบี้ยประกัน"></div>
+        <div class="field"><label class="fld">จำนวน/เดือน (บาท)</label><input type="number" id="rcAmt" inputmode="decimal" placeholder="0" min="0" step="0.01"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ประเภท</label>
+          <select id="rcType">
+            <option value="out">💸 รายจ่ายประจำ</option>
+            <option value="in">💵 รายรับประจำ (เช่น เงินเดือน)</option>
+            <option value="coop">🏦 หุ้นสหกรณ์ (สะสมเป็นทรัพย์สิน)</option>
+          </select>
+        </div>
+        <div class="field"><label class="fld">วันที่หัก (วันที่)</label><input type="number" id="rcDay" inputmode="numeric" placeholder="1" min="1" max="31" value="1"></div>
+      </div>
+      <button class="btn pri sm" onclick="addRecur()">＋ เพิ่มรายการประจำ</button>
+      <div id="rcList" style="margin-top:12px"></div>
+      <div class="hint" id="rcHint"></div>
+    </div>
+
+    <div class="card">
+      <div class="mnav">
+        <button class="arrow" onclick="shiftMonth(-1)">‹</button>
+        <div class="mtitle" id="dailyMonth"></div>
+        <button class="arrow" onclick="shiftMonth(1)">›</button>
+      </div>
+      <div class="stats" style="margin-top:12px;margin-bottom:4px">
+        <div class="stat in"><div class="lb">รับ</div><div class="nm" id="dIn" style="font-size:16px">฿0</div></div>
+        <div class="stat out"><div class="lb">จ่าย</div><div class="nm" id="dOut" style="font-size:16px">฿0</div></div>
+        <div class="stat net"><div class="lb">คงเหลือ</div><div class="nm" id="dNet" style="font-size:16px">฿0</div></div>
+      </div>
+      <div class="tlist" id="txList"></div>
+    </div>
+  </div>
+
+  <!-- ============ เงินออม ============ -->
+  <div class="pg" id="pg-save">
+    <div class="card">
+      <h2>🐷 กระปุกเงินออม</h2>
+      <div class="desc">ตั้งเป้าหมายแล้วหยอดเงินเข้าไปเรื่อยๆ เช่น เที่ยว, ฉุกเฉิน, ของอยากได้</div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ชื่อกระปุก</label><input type="text" id="potName" placeholder="เช่น เรียนต่อ 🎓"></div>
+        <div class="field"><label class="fld">เป้าหมาย (บาท)</label><input type="number" id="potTarget" inputmode="decimal" placeholder="0" min="0"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ออมอัตโนมัติ/เดือน (ถ้ามี)</label><input type="number" id="potMonthly" inputmode="decimal" placeholder="เช่น 10000" min="0"></div>
+        <div class="field"><label class="fld">อยากได้ครบเมื่อ (ถ้ามี)</label><input type="month" id="potBy"></div>
+      </div>
+      <button class="btn pri sm" onclick="addPot()">＋ สร้างกระปุก</button>
+      <div class="hint">💡 ใส่ "ออมอัตโนมัติ/เดือน" ระบบจะหยอดเข้ากระปุกให้เองทุกเดือนที่เปิดแอป และคำนวณว่าเก็บทันครบกำหนดไหม</div>
+    </div>
+    <div class="card">
+      <h2>💗 กระปุกของฉัน <span style="font-size:12px;color:var(--g4);font-weight:500" id="potTotal"></span></h2>
+      <div id="potList"></div>
+    </div>
+  </div>
+
+  <!-- ============ ลงทุน ============ -->
+  <div class="pg" id="pg-inv">
+    <div class="card">
+      <h2>📈 เพิ่มการลงทุน</h2>
+      <div class="desc">กองทุน หุ้น ทอง คริปโต ฯลฯ — ใส่ต้นทุน แล้วอัปเดตมูลค่าปัจจุบันเองเป็นระยะ</div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ชื่อสินทรัพย์</label><input type="text" id="invName" placeholder="เช่น SET50, ทองคำ, BTC"></div>
+        <div class="field"><label class="fld">ประเภท</label>
+          <select id="invType"><option>กองทุน</option><option>หุ้น</option><option>ทอง</option><option>คริปโต</option><option>สลาก/พันธบัตร</option><option>อื่นๆ</option></select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ต้นทุนที่ลงไป (บาท)</label><input type="number" id="invCost" inputmode="decimal" placeholder="0" min="0"></div>
+        <div class="field"><label class="fld">มูลค่าปัจจุบัน (บาท)</label><input type="number" id="invNow" inputmode="decimal" placeholder="เท่าต้นทุนถ้ายังไม่รู้" min="0"></div>
+      </div>
+      <button class="btn pri sm" onclick="addInv()">＋ เพิ่มสินทรัพย์</button>
+    </div>
+    <div class="card">
+      <h2>💼 พอร์ตของฉัน</h2>
+      <div class="stats" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="stat inv"><div class="lb">ต้นทุนรวม</div><div class="nm" id="invCostSum" style="font-size:16px">฿0</div></div>
+        <div class="stat save"><div class="lb">มูลค่าตอนนี้</div><div class="nm" id="invNowSum" style="font-size:16px">฿0</div></div>
+        <div class="stat net"><div class="lb">กำไร/ขาดทุน</div><div class="nm" id="invPL" style="font-size:16px">฿0</div></div>
+      </div>
+      <div class="holds" id="invList"></div>
+    </div>
+  </div>
+
+  <!-- ============ สหกรณ์ ============ -->
+  <div class="pg" id="pg-coop">
+    <div class="card">
+      <h2>🏦 หุ้นสหกรณ์ & ปันผล</h2>
+      <div class="desc">มูลค่าหุ้นสะสม และบันทึกปันผล/เฉลี่ยคืนที่ได้รับแต่ละปี</div>
+      <div class="field"><label class="fld">มูลค่าหุ้นสหกรณ์สะสม (บาท)</label>
+        <div class="row"><input type="number" id="coopShare" inputmode="decimal" placeholder="0" min="0" style="flex:1"><button class="btn ok sm" onclick="saveShare()">บันทึก</button></div>
+      </div>
+      <div class="divider"></div>
+      <label class="fld">บันทึกปันผล / เงินเฉลี่ยคืน 🎁</label>
+      <div class="grid3">
+        <div class="field"><input type="text" id="divYear" placeholder="ปี เช่น 2568"></div>
+        <div class="field"><input type="number" id="divAmt" inputmode="decimal" placeholder="จำนวนเงิน"></div>
+        <div class="field"><button class="btn pri sm" style="width:100%" onclick="addDiv()">＋ เพิ่ม</button></div>
+      </div>
+      <div id="divList"></div>
+      <div class="hint">💡 ปันผลที่บันทึกจะรวมเป็น "รายรับ" ในภาพรวมของเดือนที่ได้รับด้วย (ถ้าติ๊กเพิ่มเข้ารายวัน)</div>
+    </div>
+
+    <div class="card">
+      <h2>💳 เงินกู้ / หนี้สหกรณ์</h2>
+      <div class="desc">เห็นชัดว่ายอดกู้เท่าไหร่ · จ่ายดอกไปเท่าไหร่ · เหลือเท่าไหร่ · แต่ละงวดตัดต้นตัดดอกยังไง</div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ชื่อสัญญา</label><input type="text" id="loanName" placeholder="เช่น เงินกู้สามัญ"></div>
+        <div class="field"><label class="fld">ยอดกู้เดิม (บาท)</label><input type="number" id="loanOrig" inputmode="decimal" placeholder="ว่าง = เท่ายอดคงเหลือ" min="0"></div>
+      </div>
+      <div class="field"><label class="fld">รูปแบบการชำระ</label>
+        <select id="loanMode" onchange="loanModeHint()">
+          <option value="flat">เงินต้นเท่า (สหกรณ์) — เงินต้นคงที่ทุกงวด ดอกลดลง</option>
+          <option value="annuity">ผ่อนเท่ากันทุกงวด — ยอดจ่ายคงที่</option>
+        </select>
+      </div>
+      <div class="grid3">
+        <div class="field"><label class="fld">ยอดคงเหลือ</label><input type="number" id="loanBal" inputmode="decimal" placeholder="0" min="0"></div>
+        <div class="field"><label class="fld" id="loanPayLb">เงินต้น/งวด</label><input type="number" id="loanPay" inputmode="decimal" placeholder="0" min="0"></div>
+        <div class="field"><label class="fld">ดอกเบี้ย/ปี (%)</label><input type="number" id="loanRate" inputmode="decimal" placeholder="5.75" min="0" step="0.01"></div>
+      </div>
+      <button class="btn pri sm" onclick="addLoan()">＋ เพิ่มสัญญากู้</button>
+      <div class="hint" id="loanHint">💡 <b>เงินต้นเท่า (สหกรณ์):</b> ใส่ "เงินต้น/งวด" ที่คงที่ (เช่น 2,700) ระบบจะบวกดอกเบี้ยตามยอดคงเหลือให้เอง ยอดจ่ายจริงจะค่อยๆ ลดลงทุกงวด</div>
+      <div class="holds" id="loanList" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card">
+      <h2>💡 กู้มาลงทุน → จุดคืนทุน</h2>
+      <div class="desc">กู้เงินมาลงทุนแล้วกินปันผล — ดูว่าอีกกี่ปีปันผลจะคืนทุนที่กู้มา (ทั้งแบบดิบ และหักดอกเบี้ยเงินกู้แล้ว)</div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ชื่อโครงการ</label><input type="text" id="levName" placeholder="เช่น กู้ซื้อหุ้นสหกรณ์"></div>
+        <div class="field"><label class="fld">ยอดที่กู้มาลงทุน (ทุน)</label><input type="number" id="levCap" inputmode="decimal" placeholder="0" min="0"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label class="fld">ปันผลคาดว่าได้/ปี (บาท)</label><input type="number" id="levDiv" inputmode="decimal" placeholder="0" min="0"></div>
+        <div class="field"><label class="fld">ดอกเบี้ยเงินกู้/ปี (%)</label><input type="number" id="levRate" inputmode="decimal" placeholder="เช่น 6.25" min="0" step="0.01"></div>
+      </div>
+      <button class="btn pri sm" onclick="addLev()">＋ เพิ่มโครงการ</button>
+      <div id="levList" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- ============ ข้อมูล ============ -->
+  <div class="pg" id="pg-data">
+    <div class="card">
+      <h2>⚙️ ข้อมูล & สำรอง</h2>
+      <div class="desc">ข้อมูลทั้งหมดเก็บในเครื่องนี้ (localStorage) — ควร export เก็บไว้เป็นระยะ</div>
+      <div class="row" style="gap:8px">
+        <button class="btn ok sm" onclick="exportCSV()">📄 CSV รายการ (เปิดใน Sheets)</button>
+        <button class="btn pri sm" onclick="exportJSON()">💾 สำรองทั้งหมด (JSON)</button>
+        <button class="btn sm" onclick="document.getElementById('importFile').click()">📂 นำเข้า JSON</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)">
+      </div>
+      <div class="hint">
+        📄 <b>CSV</b> = ตารางรายรับรายจ่ายทุกรายการ ดับเบิลคลิกเปิดใน Excel หรืออัปโหลดเข้า Google Sheets ได้เลย<br>
+        💾 <b>JSON</b> = สำรองข้อมูลครบทุกส่วน (ออม/ลงทุน/สหกรณ์ด้วย) ใช้กู้คืนหรือย้ายเครื่อง
+      </div>
+      <div class="divider"></div>
+      <button class="btn dl sm" onclick="wipeAll()">🗑️ ล้างข้อมูลทั้งหมด</button>
+    </div>
+    <div class="card">
+      <h2>📖 วิธีนำเข้า Google Sheets</h2>
+      <div class="hint" style="font-size:12px">
+        1. กด <b>📄 CSV รายการ</b> จะได้ไฟล์ <code>money.csv</code><br>
+        2. เปิด Google Sheets → เมนู <b>ไฟล์ › นำเข้า › อัปโหลด</b> → เลือกไฟล์<br>
+        3. เลือก "แทรกแผ่นงานใหม่" แล้วกดนำเข้า — จะได้ตารางพร้อมทำกราฟ/Pivot ต่อได้เลย ✨
+      </div>
+    </div>
+  </div>
+
+  <div class="foot mali">ทำด้วย 💜 · ข้อมูลอยู่ในเครื่องคุณเท่านั้น</div>
+</div>
+
+<script>
+/* ---------- store ---------- */
+const KEY='my_money_v1';
+const DEF={txns:[],pots:[],invs:[],loans:[],divs:[],levs:[],recurs:[],recurPosted:{},coopShare:0};
+let db=load();
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));return Object.assign({},DEF,r||{})}catch(e){return JSON.parse(JSON.stringify(DEF))}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){/* พรีวิว data: URL หรือโหมดส่วนตัว — เก็บในหน่วยความจำต่อได้ */}}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+/* ---------- helpers ---------- */
+const THB=n=>'฿'+Math.round((n||0)).toLocaleString('en-US');
+const THB2=n=>'฿'+(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const TH_M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_MF=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function ymNow(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+let curYM=ymNow();
+function todayISO(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function fmtDay(iso){const d=new Date(iso+'T00:00:00');const dn=['อา','จ','อ','พ','พฤ','ศ','ส'][d.getDay()];return dn+' '+d.getDate()+' '+TH_M[d.getMonth()]}
+function ymLabel(ym){const [y,m]=ym.split('-').map(Number);return TH_MF[m-1]+' '+(y+543)}
+
+/* ---------- categories ---------- */
+const CATS={
+  out:['🍜 อาหาร','🚗 เดินทาง','🛍️ ช้อปปิ้ง','💡 ค่าน้ำค่าไฟ','🏥 สุขภาพ','💳 ผ่อน/หนี้','🎬 บันเทิง','🎁 ให้/บริจาค','📚 การศึกษา','🐷 ออมเงิน','อื่นๆ'],
+  in:['💰 เงินเดือน','🩺 เวร/OT','🎁 ปันผล','🏦 ดอกเบี้ย','📈 ขายลงทุน','🧧 ได้รับ','อื่นๆ']
+};
+let txType='out', txCatSel='';
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  document.getElementById('pg-'+t.dataset.tab).classList.add('on');
+  renderAll();
+});
+
+/* ---------- month nav ---------- */
+function shiftMonth(d){let [y,m]=curYM.split('-').map(Number);m+=d;if(m<1){m=12;y--}if(m>12){m=1;y++}curYM=y+'-'+String(m).padStart(2,'0');renderAll()}
+
+/* ---------- daily / txn ---------- */
+function setTxType(t){txType=t;txCatSel='';document.getElementById('txCat').value='';
+  document.getElementById('pOut').classList.toggle('on',t==='out');
+  document.getElementById('pIn').classList.toggle('on',t==='in');
+  renderChips()}
+function renderChips(){
+  const wrap=document.getElementById('txChips');wrap.innerHTML='';
+  CATS[txType].forEach(c=>{
+    const el=document.createElement('div');el.className='chip'+(txCatSel===c?' on':'');el.textContent=c;
+    el.onclick=()=>{txCatSel=(txCatSel===c?'':c);document.getElementById('txCat').value=txCatSel==='อื่นๆ'?'':txCatSel;renderChips()};
+    wrap.appendChild(el);
+  });
+}
+function addTx(){
+  const amt=parseFloat(document.getElementById('txAmt').value);
+  const date=document.getElementById('txDate').value||todayISO();
+  let cat=document.getElementById('txCat').value.trim()||txCatSel||(txType==='out'?'อื่นๆ':'อื่นๆ');
+  const note=document.getElementById('txNote').value.trim();
+  if(!amt||amt<=0){alert('ใส่จำนวนเงินก่อนนะ 💸');return}
+  db.txns.push({id:uid(),date,type:txType,cat,amt,note});save();
+  document.getElementById('txAmt').value='';document.getElementById('txNote').value='';
+  document.getElementById('txCat').value='';txCatSel='';renderChips();
+  curYM=date.slice(0,7);
+  renderAll();
+}
+function delTx(id){db.txns=db.txns.filter(t=>t.id!==id);save();renderAll()}
+function monthTx(ym){return db.txns.filter(t=>t.date.slice(0,7)===ym).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id))}
+function renderDaily(){
+  renderRecur();
+  document.getElementById('dailyMonth').textContent=ymLabel(curYM);
+  const list=monthTx(curYM);
+  let tin=0,tout=0;list.forEach(t=>t.type==='in'?tin+=t.amt:tout+=t.amt);
+  document.getElementById('dIn').textContent=THB(tin);
+  document.getElementById('dOut').textContent=THB(tout);
+  document.getElementById('dNet').textContent=THB(tin-tout);
+  const box=document.getElementById('txList');box.innerHTML='';
+  if(!list.length){box.innerHTML='<div class="empty"><span class="e">🧾</span>ยังไม่มีรายการเดือนนี้<br>เพิ่มรายการแรกกันเลย!</div>';return}
+  const days=[...new Set(list.map(t=>t.date))];
+  days.forEach(d=>{
+    const items=list.filter(t=>t.date===d);
+    const dsum=items.reduce((s,t)=>s+(t.type==='in'?t.amt:-t.amt),0);
+    const g=document.createElement('div');g.className='dgrp';
+    g.innerHTML='<div class="dh"><span>'+fmtDay(d)+'</span><span style="color:'+(dsum>=0?'var(--ok-t)':'var(--rd-t)')+'">'+(dsum>=0?'+':'')+THB(dsum)+'</span></div>';
+    items.forEach(t=>{
+      const icon=(t.cat.match(/^\p{Emoji}/u)||[t.type==='in'?'💵':'💸'])[0];
+      const catName=t.cat.replace(/^\p{Emoji}\s*/u,'');
+      const row=document.createElement('div');row.className='tx';
+      row.innerHTML='<div class="ic">'+icon+'</div><div class="info"><div class="cat">'+catName+'</div>'+
+        (t.note?'<div class="note">'+esc(t.note)+'</div>':'')+'</div>'+
+        '<div class="amt '+t.type+'">'+(t.type==='in'?'+':'−')+THB2(t.amt)+'</div>'+
+        '<button class="del" title="ลบ">✕</button>';
+      row.querySelector('.del').onclick=()=>{if(confirm('ลบรายการนี้?'))delTx(t.id)};
+      g.appendChild(row);
+    });
+    box.appendChild(g);
+  });
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+/* ---------- รายการประจำ (auto-deduct) ---------- */
+function addRecur(){
+  const name=document.getElementById('rcName').value.trim();
+  const amt=parseFloat(document.getElementById('rcAmt').value)||0;
+  const t=document.getElementById('rcType').value;
+  let day=parseInt(document.getElementById('rcDay').value)||1;day=Math.min(31,Math.max(1,day));
+  if(!name||!amt){alert('ใส่ชื่อรายการ + จำนวนก่อนนะ 🔁');return}
+  const coop=(t==='coop');
+  const type=coop?'out':t;
+  const defCat=coop?'🏦 หุ้นสหกรณ์':(type==='in'?'💰 เงินเดือน':'🔁 รายจ่ายประจำ');
+  db.recurs.push({id:uid(),name,amt,type,kind:coop?'coopShare':'txn',cat:defCat,day});save();
+  ['rcName','rcAmt'].forEach(i=>document.getElementById(i).value='');document.getElementById('rcDay').value='1';
+  postRecurring();       // ลงของเดือนนี้ให้ทันที
+  renderAll();
+}
+function delRecur(id){if(!confirm('ลบรายการประจำนี้? (รายการที่ลงไปแล้วยังอยู่)'))return;db.recurs=db.recurs.filter(r=>r.id!==id);save();renderDaily();renderCoop()}
+/* ลงรายการประจำของ "เดือนปัจจุบันจริง" ถ้ายังไม่เคยลง */
+function postRecurring(){
+  const ym=ymNow();let changed=false;
+  db.recurPosted=db.recurPosted||{};
+  (db.recurs||[]).forEach(r=>{
+    const key=r.id+'|'+ym;
+    if(db.recurPosted[key])return;
+    if(r.kind==='coopShare'){
+      db.coopShare=(db.coopShare||0)+r.amt;
+    }else{
+      const d=Math.min(r.day||1,28);
+      db.txns.push({id:uid(),date:ym+'-'+String(d).padStart(2,'0'),type:r.type,cat:r.cat,amt:r.amt,note:'🔁 '+r.name});
+    }
+    db.recurPosted[key]=true;changed=true;
+  });
+  // ออมอัตโนมัติเข้ากระปุก: เพิ่มเข้ากระปุก + บันทึกเป็นรายจ่าย "ออมเงิน"
+  (db.pots||[]).forEach(p=>{
+    if(!(p.monthly>0))return;
+    const key='pot-'+p.id+'|'+ym;
+    if(db.recurPosted[key])return;
+    p.saved=(p.saved||0)+p.monthly;
+    db.txns.push({id:uid(),date:ym+'-01',type:'out',cat:'🐷 ออมเงิน',amt:p.monthly,note:'🔁 ออมเข้า '+p.name});
+    db.recurPosted[key]=true;changed=true;
+  });
+  if(changed)save();
+}
+function renderRecur(){
+  const box=document.getElementById('rcList');if(!box)return;box.innerHTML='';
+  const hint=document.getElementById('rcHint');
+  if(!db.recurs.length){box.innerHTML='<div class="empty" style="padding:16px"><span class="e">🔁</span>ยังไม่มีรายการประจำ</div>';if(hint)hint.innerHTML='';return}
+  const ym=ymNow();
+  db.recurs.forEach(r=>{
+    const coop=r.kind==='coopShare';
+    const posted=(db.recurPosted||{})[r.id+'|'+ym];
+    const row=document.createElement('div');row.className='tx';
+    const sign=coop?'🏦':(r.type==='in'?'💵':'💸');
+    row.innerHTML='<div class="ic">'+sign+'</div><div class="info"><div class="cat">'+esc(r.name)+
+      (coop?' <span class="levbadge ok">สะสมหุ้น</span>':'')+'</div>'+
+      '<div class="note">ทุกวันที่ '+(r.day||1)+' · '+(posted?'<span class="up">ลงเดือนนี้แล้ว ✓</span>':'<span style="color:var(--g4)">รอลงเดือนนี้</span>')+'</div></div>'+
+      '<div class="amt '+(r.type==='in'?'in':'out')+'">'+(r.type==='in'?'+':'−')+THB2(r.amt)+'</div>'+
+      '<button class="del">✕</button>';
+    row.querySelector('.del').onclick=()=>delRecur(r.id);
+    box.appendChild(row);
+  });
+  const totOut=db.recurs.filter(r=>r.type==='out'&&r.kind!=='coopShare').reduce((s,r)=>s+r.amt,0);
+  const totCoop=db.recurs.filter(r=>r.kind==='coopShare').reduce((s,r)=>s+r.amt,0);
+  const totIn=db.recurs.filter(r=>r.type==='in').reduce((s,r)=>s+r.amt,0);
+  if(hint)hint.innerHTML='รวมประจำ/เดือน — รับ '+THB(totIn)+' · จ่าย '+THB(totOut)+(totCoop?' · เข้าหุ้นสหกรณ์ '+THB(totCoop):'')+
+    '<br>💡 หุ้นสหกรณ์ถูกหักจากเงินเดือนอยู่แล้ว ระบบจึงเพิ่มเข้า "มูลค่าหุ้น" ให้ (ไม่นับเป็นรายจ่ายซ้ำ)';
+}
+
+/* ---------- savings ---------- */
+function monthsBetween(a,b){const[ay,am]=a.split('-').map(Number);const[by,bm]=b.split('-').map(Number);return (by-ay)*12+(bm-am)}
+function addMonthsYM(ym,n){let[y,m]=ym.split('-').map(Number);m+=n;while(m>12){m-=12;y++}while(m<1){m+=12;y--}return y+'-'+String(m).padStart(2,'0')}
+function addPot(){
+  const name=document.getElementById('potName').value.trim();
+  const target=parseFloat(document.getElementById('potTarget').value)||0;
+  const monthly=parseFloat(document.getElementById('potMonthly').value)||0;
+  const by=document.getElementById('potBy').value||'';
+  if(!name){alert('ตั้งชื่อกระปุกก่อนนะ 🐷');return}
+  db.pots.push({id:uid(),name,target,saved:0,monthly,by});save();
+  ['potName','potTarget','potMonthly','potBy'].forEach(i=>document.getElementById(i).value='');
+  postRecurring();renderAll();
+}
+function potMove(id,dir){
+  const p=db.pots.find(x=>x.id===id);if(!p)return;
+  const v=parseFloat(prompt((dir>0?'หยอดเข้า':'ถอนออก')+' "'+p.name+'" กี่บาท?',''));
+  if(!v||v<=0)return;
+  p.saved=Math.max(0,(p.saved||0)+dir*v);save();renderSave();renderOver();
+}
+function potEdit(id){
+  const p=db.pots.find(x=>x.id===id);if(!p)return;
+  const t=prompt('เป้าหมาย (บาท)',p.target||0);if(t===null)return;
+  const m=prompt('ออมอัตโนมัติ/เดือน (0 = ไม่ออมอัตโนมัติ)',p.monthly||0);if(m===null)return;
+  const b=prompt('อยากได้ครบเมื่อ (พิมพ์ปี-เดือน เช่น 2027-03 หรือเว้นว่าง)',p.by||'');if(b===null)return;
+  p.target=Math.max(0,parseFloat(t)||0);p.monthly=Math.max(0,parseFloat(m)||0);p.by=(b||'').trim();
+  save();renderAll();
+}
+function delPot(id){if(!confirm('ลบกระปุกนี้? (รายการที่ออมไปแล้วในประวัติยังอยู่)'))return;db.pots=db.pots.filter(p=>p.id!==id);save();renderSave();renderOver()}
+function renderSave(){
+  const box=document.getElementById('potList');box.innerHTML='';
+  const total=db.pots.reduce((s,p)=>s+(p.saved||0),0);
+  document.getElementById('potTotal').textContent=db.pots.length?'· รวม '+THB(total):'';
+  if(!db.pots.length){box.innerHTML='<div class="empty"><span class="e">🐷</span>ยังไม่มีกระปุก<br>สร้างเป้าหมายแรกกันเลย!</div>';return}
+  const ym=ymNow();
+  db.pots.forEach(p=>{
+    const pct=p.target>0?Math.min(100,p.saved/p.target*100):(p.saved>0?100:0);
+    const remain=Math.max(0,(p.target||0)-(p.saved||0));
+    let plan='';
+    if(p.monthly>0){
+      plan+='<div class="levline">🔁 ออมอัตโนมัติเดือนละ <b>'+THB(p.monthly)+'</b>';
+      if(p.target>0&&remain>0){const n=Math.ceil(remain/p.monthly);plan+=' · อีก <b>'+n+' เดือน</b>ถึงเป้า (~'+ymLabel(addMonthsYM(ym,n))+')';}
+      else if(p.target>0){plan+=' · <b class="up">ครบเป้าแล้ว 🎉</b>';}
+      plan+='</div>';
+    }
+    if(p.by&&p.target>0&&remain>0){
+      const left=monthsBetween(ym,p.by);
+      if(left>0){
+        const need=Math.ceil(remain/left);
+        const ok=(p.monthly||0)>=need;
+        plan+='<div class="levline '+(ok?'':'warn')+'">🎯 ครบกำหนด '+ymLabel(p.by)+' (เหลือ '+left+' เดือน) — ต้องออมเดือนละ <b>'+THB(need)+'</b>'+
+          (p.monthly>0?(ok?' · <b class="up">แผนนี้ทันแน่นอน ✓</b>':' · <b>ยังขาดเดือนละ '+THB(need-p.monthly)+'</b>'):'')+'</div>';
+      }else{
+        plan+='<div class="levline warn">🎯 เลยกำหนด '+ymLabel(p.by)+' แล้ว — ยังขาดอีก '+THB(remain)+'</div>';
+      }
+    }
+    const el=document.createElement('div');el.className='pot';
+    el.innerHTML='<div class="top"><div><div class="pn">'+esc(p.name)+'</div>'+
+      '<div class="pv">'+THB(p.saved)+(p.target>0?' / '+THB(p.target):'')+'</div></div>'+
+      '<div class="row" style="gap:4px"><button class="btn xs ed">✏️</button><button class="del" style="background:none;border:none;color:var(--g4);cursor:pointer;font-size:15px">✕</button></div></div>'+
+      '<div class="bar"><i style="width:'+pct+'%"></i></div>'+
+      (p.target>0?'<div class="pct">'+pct.toFixed(0)+'% ของเป้า</div>':'')+
+      plan+
+      '<div class="acts"><button class="btn ok xs">＋ หยอด</button><button class="btn xs">− ถอน</button></div>';
+    el.querySelector('.del').onclick=()=>delPot(p.id);
+    el.querySelector('.ed').onclick=()=>potEdit(p.id);
+    const btns=el.querySelectorAll('.acts button');
+    btns[0].onclick=()=>potMove(p.id,1);btns[1].onclick=()=>potMove(p.id,-1);
+    box.appendChild(el);
+  });
+}
+
+/* ---------- investments ---------- */
+function addInv(){
+  const name=document.getElementById('invName').value.trim();
+  const type=document.getElementById('invType').value;
+  const cost=parseFloat(document.getElementById('invCost').value)||0;
+  let now=document.getElementById('invNow').value;now=now===''?cost:parseFloat(now)||0;
+  if(!name){alert('ใส่ชื่อสินทรัพย์ก่อนนะ 📈');return}
+  db.invs.push({id:uid(),name,type,cost,now});save();
+  ['invName','invCost','invNow'].forEach(i=>document.getElementById(i).value='');renderInv();renderOver();
+}
+function invUpdate(id){
+  const it=db.invs.find(x=>x.id===id);if(!it)return;
+  const v=parseFloat(prompt('มูลค่าปัจจุบันของ "'+it.name+'" (บาท)',it.now));
+  if(isNaN(v))return;it.now=Math.max(0,v);save();renderInv();renderOver();
+}
+function delInv(id){if(!confirm('ลบสินทรัพย์นี้?'))return;db.invs=db.invs.filter(i=>i.id!==id);save();renderInv();renderOver()}
+function renderInv(){
+  const box=document.getElementById('invList');box.innerHTML='';
+  let cs=0,ns=0;db.invs.forEach(i=>{cs+=i.cost;ns+=i.now});
+  document.getElementById('invCostSum').textContent=THB(cs);
+  document.getElementById('invNowSum').textContent=THB(ns);
+  const pl=ns-cs;const plEl=document.getElementById('invPL');
+  plEl.textContent=(pl>=0?'+':'−')+THB(Math.abs(pl));plEl.style.color=pl>=0?'var(--ok-t)':'var(--rd-t)';
+  if(!db.invs.length){box.innerHTML='<div class="empty"><span class="e">📈</span>ยังไม่มีการลงทุน</div>';return}
+  db.invs.forEach(i=>{
+    const pl=i.now-i.cost;const pct=i.cost>0?pl/i.cost*100:0;const up=pl>=0;
+    const el=document.createElement('div');el.className='hold';
+    el.innerHTML='<div class="top"><div><span class="hn">'+esc(i.name)+'</span> <span class="htag">'+esc(i.type)+'</span></div>'+
+      '<div class="row" style="gap:4px"><button class="btn xs">✏️ อัปเดต</button><button class="btn dl xs">✕</button></div></div>'+
+      '<div class="hnums"><div><span>ต้นทุน</span><b>'+THB(i.cost)+'</b></div>'+
+      '<div><span>มูลค่าตอนนี้</span><b>'+THB(i.now)+'</b></div>'+
+      '<div><span>กำไร/ขาดทุน</span><b class="'+(up?'up':'down')+'">'+(up?'+':'−')+THB(Math.abs(pl))+' ('+(up?'+':'')+pct.toFixed(1)+'%)</b></div></div>';
+    const b=el.querySelectorAll('button');b[0].onclick=()=>invUpdate(i.id);b[1].onclick=()=>delInv(i.id);
+    box.appendChild(el);
+  });
+}
+
+/* ---------- coop: shares, dividends, loans ---------- */
+function saveShare(){db.coopShare=parseFloat(document.getElementById('coopShare').value)||0;save();alert('บันทึกมูลค่าหุ้นแล้ว ✨');renderOver()}
+function addDiv(){
+  const year=document.getElementById('divYear').value.trim();
+  const amt=parseFloat(document.getElementById('divAmt').value)||0;
+  if(!amt){alert('ใส่จำนวนปันผลก่อนนะ 🎁');return}
+  db.divs.push({id:uid(),year:year||'-',amt});save();
+  document.getElementById('divYear').value='';document.getElementById('divAmt').value='';renderCoop();
+}
+function delDiv(id){db.divs=db.divs.filter(d=>d.id!==id);save();renderCoop()}
+function loanModeHint(){
+  const flat=document.getElementById('loanMode').value==='flat';
+  document.getElementById('loanPayLb').textContent=flat?'เงินต้น/งวด':'ยอดผ่อน/งวด';
+  document.getElementById('loanHint').innerHTML=flat
+    ?'💡 <b>เงินต้นเท่า (สหกรณ์):</b> ใส่ "เงินต้น/งวด" ที่คงที่ (เช่น 2,700) ระบบจะบวกดอกเบี้ยตามยอดคงเหลือให้เอง ยอดจ่ายจริงจะค่อยๆ ลดลงทุกงวด'
+    :'💡 <b>ผ่อนเท่ากันทุกงวด:</b> ใส่ "ยอดผ่อน/งวด" ทั้งก้อน (ต้น+ดอก) ระบบจะแยกให้ว่างวดไหนตัดดอกเท่าไหร่ตัดต้นเท่าไหร่';
+}
+function addLoan(){
+  const name=document.getElementById('loanName').value.trim();
+  let orig=parseFloat(document.getElementById('loanOrig').value)||0;
+  const mode=document.getElementById('loanMode').value;
+  const bal=parseFloat(document.getElementById('loanBal').value)||0;
+  const pay=parseFloat(document.getElementById('loanPay').value)||0;
+  const rate=parseFloat(document.getElementById('loanRate').value)||0;
+  if(!name){alert('ใส่ชื่อสัญญากู้ก่อนนะ');return}
+  if(!orig)orig=bal;
+  db.loans.push({id:uid(),name,mode,orig,bal,pay,rate,intPaid:0,nPay:0});save();
+  ['loanName','loanOrig','loanBal','loanPay','loanRate'].forEach(i=>document.getElementById(i).value='');renderCoop();renderOver();
+}
+function loanPayNow(id){
+  const l=db.loans.find(x=>x.id===id);if(!l)return;
+  const flat=(l.mode||'flat')==='flat';
+  const i=l.bal*(l.rate||0)/1200;                       // ดอกเบี้ยงวดนี้ (คิดจากยอดคงเหลือ)
+  const def=flat?(Math.min(l.pay,l.bal)+i):l.pay;
+  const v=parseFloat(prompt('ยอดที่จ่ายงวดนี้ทั้งหมด (เงินต้น+ดอก) กี่บาท?',def?def.toFixed(2):''));
+  if(!v||v<=0)return;
+  const intPart=Math.min(v,i);
+  const prinPart=Math.min(Math.max(0,v-i),l.bal);
+  l.intPaid=(l.intPaid||0)+intPart;
+  l.bal=Math.max(0,l.bal-prinPart);
+  l.nPay=(l.nPay||0)+1;
+  save();renderCoop();renderOver();
+  const msg='งวดที่ '+l.nPay+': ตัดดอก '+THB2(intPart)+' · ตัดเงินต้น '+THB2(prinPart)+'\nยอดคงเหลือ '+THB(l.bal)+(l.bal<=0?'\n\n🎉 ปลอดหนี้ก้อนนี้แล้ว เก่งมาก!':'');
+  setTimeout(()=>alert(msg),80);
+}
+function loanEdit(id){
+  const l=db.loans.find(x=>x.id===id);if(!l)return;
+  const b=prompt('แก้ยอดคงเหลือ (บาท)',l.bal);if(b===null)return;
+  const p=prompt('แก้ '+((l.mode||'flat')==='flat'?'เงินต้น/งวด':'ยอดผ่อน/งวด')+' (บาท)',l.pay);if(p===null)return;
+  const r=prompt('แก้ดอกเบี้ย/ปี (%)',l.rate);if(r===null)return;
+  l.bal=Math.max(0,parseFloat(b)||0);l.pay=Math.max(0,parseFloat(p)||0);l.rate=Math.max(0,parseFloat(r)||0);
+  save();renderCoop();renderOver();
+}
+/* คำนวณงวดที่เหลือ + ดอกที่จะจ่ายอีก รองรับ 2 แบบ */
+function amort(l){
+  const bal=l.bal,pay=l.pay||0,i=(l.rate||0)/1200;
+  if(bal<=0)return{months:0,interest:0};
+  if(pay<=0)return{months:Infinity,interest:0};
+  if((l.mode||'flat')==='flat'){                          // เงินต้นเท่า: pay = เงินต้น/งวด
+    const n=Math.ceil(bal/pay);
+    const interest=i<=0?0:i*(n*bal-pay*n*(n-1)/2);
+    return{months:n,interest:Math.max(0,interest)};
+  }
+  if(i<=0)return{months:Math.ceil(bal/pay),interest:0};    // ผ่อนคงที่
+  if(pay<=bal*i)return{months:Infinity,interest:Infinity}; // ผ่อนไม่พอตัดต้น
+  const n=Math.ceil(-Math.log(1-bal*i/pay)/Math.log(1+i));
+  return{months:n,interest:Math.max(0,n*pay-bal)};
+}
+function delLoan(id){if(!confirm('ลบสัญญานี้?'))return;db.loans=db.loans.filter(l=>l.id!==id);save();renderCoop();renderOver()}
+function renderCoop(){
+  document.getElementById('coopShare').value=db.coopShare||'';
+  const dl=document.getElementById('divList');dl.innerHTML='';
+  if(db.divs.length){
+    const dtot=db.divs.reduce((s,d)=>s+d.amt,0);
+    db.divs.slice().reverse().forEach(d=>{
+      const row=document.createElement('div');row.className='tx';
+      row.innerHTML='<div class="ic">🎁</div><div class="info"><div class="cat">ปันผลปี '+esc(d.year)+'</div></div>'+
+        '<div class="amt in">+'+THB2(d.amt)+'</div><button class="del">✕</button>';
+      row.querySelector('.del').onclick=()=>delDiv(d.id);dl.appendChild(row);
+    });
+    const s=document.createElement('div');s.className='dh';s.style.marginTop='6px';
+    s.innerHTML='<span>รวมปันผลทั้งหมด</span><span style="color:var(--ok-t)">'+THB(dtot)+'</span>';dl.appendChild(s);
+  }
+  const ll=document.getElementById('loanList');ll.innerHTML='';
+  if(!db.loans.length){ll.innerHTML='<div class="empty"><span class="e">💳</span>ยังไม่มีเงินกู้ — ดีมาก! 🎉</div>';return}
+  db.loans.forEach(l=>{
+    const flat=(l.mode||'flat')==='flat';
+    const orig=l.orig||l.bal;
+    const paidPrin=Math.max(0,orig-l.bal);
+    const pct=orig>0?paidPrin/orig*100:0;
+    const est=amort(l);
+    const nextI=l.bal*(l.rate||0)/1200;
+    const nextP=flat?Math.min(l.pay||0,l.bal):Math.max(0,(l.pay||0)-nextI);
+    const nextTotal=nextP+nextI;
+    let payoff;
+    if(l.bal<=0)payoff='<b class="up">ปลอดหนี้แล้ว 🎉</b>';
+    else if(est.months===Infinity)payoff='<b class="down">⚠️ ยอดผ่อน '+THB(l.pay)+' ไม่พอตัดต้น — หนี้ไม่ลด (ดอกงวดละ '+THB2(nextI)+')</b>';
+    else payoff='เหลืออีก ~<b>'+est.months+' งวด</b> (~'+(est.months/12).toFixed(1)+' ปี) · ดอกที่จะจ่ายอีก ~<b>'+THB(est.interest)+'</b>';
+    const el=document.createElement('div');el.className='hold';
+    el.innerHTML='<div class="top"><div><span class="hn">'+esc(l.name)+'</span> <span class="htag">'+(l.rate||0)+'%/ปี · '+(flat?'เงินต้นเท่า':'ผ่อนคงที่')+'</span></div>'+
+      '<div class="row" style="gap:4px"><button class="btn ok xs">💰 ผ่อน</button><button class="btn xs">✏️</button><button class="btn dl xs">✕</button></div></div>'+
+      '<div class="loanbig">ยอดคงเหลือ <b>'+THB(l.bal)+'</b></div>'+
+      '<div class="bar"><i style="width:'+pct.toFixed(0)+'%;background:linear-gradient(90deg,#B7E7C0,#34c77b)"></i></div>'+
+      '<div class="pct">ผ่อนเงินต้นไปแล้ว '+pct.toFixed(0)+'% ของยอดกู้</div>'+
+      '<div class="hnums"><div><span>ยอดกู้เดิม</span><b>'+THB(orig)+'</b></div>'+
+      '<div><span>เงินต้นที่ลดแล้ว</span><b class="up">'+THB(paidPrin)+'</b></div>'+
+      '<div><span>ดอกจ่ายสะสม</span><b class="down">'+THB(l.intPaid||0)+'</b></div></div>'+
+      '<div class="splitrow"><div class="si">งวดหน้าตัดดอก<b>'+THB2(nextI)+'</b></div><div class="sp">งวดหน้าตัดต้น<b>'+THB2(nextP)+'</b></div></div>'+
+      '<div class="loanfoot">งวดหน้าจ่ายจริง ~<b>'+THB2(nextTotal)+'</b> · ผ่อนแล้ว '+(l.nPay||0)+' งวด<br>'+payoff+'</div>';
+    const b=el.querySelectorAll('button');b[0].onclick=()=>loanPayNow(l.id);b[1].onclick=()=>loanEdit(l.id);b[2].onclick=()=>delLoan(l.id);
+    ll.appendChild(el);
+  });
+  renderLev();
+}
+
+/* ---------- กู้มาลงทุน → จุดคืนทุน ---------- */
+function addLev(){
+  const name=document.getElementById('levName').value.trim();
+  const cap=parseFloat(document.getElementById('levCap').value)||0;
+  const div=parseFloat(document.getElementById('levDiv').value)||0;
+  const rate=parseFloat(document.getElementById('levRate').value)||0;
+  if(!name||!cap){alert('ใส่ชื่อโครงการ + ยอดที่กู้มาก่อนนะ 💡');return}
+  db.levs.push({id:uid(),name,cap,div,rate,recv:[]});save();
+  ['levName','levCap','levDiv','levRate'].forEach(i=>document.getElementById(i).value='');renderLev();
+}
+function levReceive(id){
+  const L=db.levs.find(x=>x.id===id);if(!L)return;
+  const v=parseFloat(prompt('บันทึกปันผลที่ได้รับจริง (บาท)',L.div||''));
+  if(!v||v<=0)return;L.recv.push({d:todayISO(),amt:v});save();renderLev();
+}
+function levEdit(id){
+  const L=db.levs.find(x=>x.id===id);if(!L)return;
+  const c=prompt('ยอดที่กู้มาลงทุน (ทุน)',L.cap);if(c===null)return;
+  const d=prompt('ปันผลคาดว่าได้/ปี (บาท)',L.div);if(d===null)return;
+  const r=prompt('ดอกเบี้ยเงินกู้/ปี (%)',L.rate);if(r===null)return;
+  L.cap=Math.max(0,parseFloat(c)||0);L.div=Math.max(0,parseFloat(d)||0);L.rate=Math.max(0,parseFloat(r)||0);
+  save();renderLev();
+}
+function delLev(id){if(!confirm('ลบโครงการนี้?'))return;db.levs=db.levs.filter(x=>x.id!==id);save();renderLev()}
+function paybackSVG(cap,div,cum){
+  const W=340,H=126,pL=8,pR=8,pT=12,pB=24;
+  if(div<=0)return '<div class="hint" style="text-align:center">ใส่ "ปันผลคาดว่าได้/ปี" เพื่อดูกราฟจุดคืนทุน 📈</div>';
+  const cross=(cap-cum)/div;                       // ปีนับจากตอนนี้ถึงคืนทุน
+  const horizon=Math.max(2,Math.min(40,Math.ceil(cross)+1));
+  const maxY=Math.max(cap,cum+div*horizon)*1.05;
+  const X=k=>pL+(k/horizon)*(W-pL-pR);
+  const Y=v=>pT+(1-v/maxY)*(H-pT-pB);
+  let pts=[];for(let k=0;k<=horizon;k++)pts.push([X(k),Y(cum+div*k)]);
+  const line=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area=line+' L'+X(horizon).toFixed(1)+' '+Y(0).toFixed(1)+' L'+X(0).toFixed(1)+' '+Y(0).toFixed(1)+' Z';
+  const capY=Y(cap);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" class="chart">';
+  s+='<defs><linearGradient id="lgv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9D6F0" stop-opacity=".55"/><stop offset="1" stop-color="#A9D6F0" stop-opacity=".08"/></linearGradient></defs>';
+  s+='<path d="'+area+'" fill="url(#lgv)"/>';
+  s+='<path d="'+line+'" fill="none" stroke="#5b9bd5" stroke-width="2.2"/>';
+  s+='<line x1="'+pL+'" y1="'+capY.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+capY.toFixed(1)+'" stroke="#ef6b8f" stroke-width="1.5" stroke-dasharray="4 3"/>';
+  s+='<text x="'+(W-pR)+'" y="'+(capY-4).toFixed(1)+'" font-size="9.5" fill="#b04270" text-anchor="end">ทุน '+THB(cap)+'</text>';
+  if(cum>=cap){
+    s+='<text x="'+(W/2)+'" y="'+(H/2)+'" font-size="13" fill="#1f7a4d" text-anchor="middle" font-weight="700">คืนทุนแล้ว 🎉</text>';
+  }else if(cross>0&&cross<=horizon){
+    const bx=X(cross);
+    s+='<circle cx="'+bx.toFixed(1)+'" cy="'+capY.toFixed(1)+'" r="4.5" fill="#34c77b" stroke="#fff" stroke-width="1.5"/>';
+    s+='<line x1="'+bx.toFixed(1)+'" y1="'+capY.toFixed(1)+'" x2="'+bx.toFixed(1)+'" y2="'+(H-pB)+'" stroke="#34c77b" stroke-width="1" stroke-dasharray="2 2"/>';
+    s+='<text x="'+bx.toFixed(1)+'" y="'+(H-9)+'" font-size="9.5" fill="#1f7a4d" text-anchor="middle" font-weight="700">คืนทุน ~'+cross.toFixed(1)+' ปี</text>';
+  }
+  s+='<text x="'+pL+'" y="'+(H-9)+'" font-size="8.5" fill="#a99bb8">ตอนนี้</text>';
+  s+='<text x="'+(W-pR)+'" y="'+(H-9)+'" font-size="8.5" fill="#a99bb8" text-anchor="end">'+horizon+' ปี</text>';
+  s+='</svg>';
+  return s;
+}
+function renderLev(){
+  const box=document.getElementById('levList');if(!box)return;box.innerHTML='';
+  if(!db.levs.length){box.innerHTML='<div class="empty"><span class="e">💡</span>ยังไม่มีโครงการกู้มาลงทุน</div>';return}
+  db.levs.forEach(L=>{
+    const cum=(L.recv||[]).reduce((s,r)=>s+r.amt,0);
+    const pct=L.cap>0?Math.min(100,cum/L.cap*100):0;
+    const intYr=L.cap*(L.rate||0)/100;
+    const netYr=L.div-intYr;
+    const grossYrs=L.div>0?L.cap/L.div:Infinity;
+    const netYrs=netYr>0?L.cap/netYr:Infinity;
+    const badge=netYr>0?'<span class="levbadge ok">ได้กำไรปีละ '+THB(netYr)+'</span>':'<span class="levbadge bad">ปันผลไม่คุ้มดอก</span>';
+    let summary;
+    if(netYr<=0){
+      summary='<div class="levline warn">⚠️ ปันผล '+THB(L.div)+'/ปี น้อยกว่าดอกเบี้ยเงินกู้ '+THB(intYr)+'/ปี<br>เท่ากับ<b> ขาดทุนปีละ '+THB(Math.abs(netYr))+'</b> — แบบนี้ยังไม่คืนทุน ควรทบทวน</div>';
+    }else{
+      summary='<div class="levline">💰 คืนทุนแบบดิบ (นับปันผลอย่างเดียว) ~<b>'+grossYrs.toFixed(1)+' ปี</b><br>'+
+        '🧮 หักดอกเบี้ยเงินกู้แล้ว (ปันผลสุทธิ '+THB(netYr)+'/ปี) คืนทุนจริง ~<b>'+netYrs.toFixed(1)+' ปี</b></div>';
+    }
+    const el=document.createElement('div');el.className='hold';
+    el.innerHTML='<div class="top"><div><span class="hn">'+esc(L.name)+'</span>'+badge+'</div>'+
+      '<div class="row" style="gap:4px"><button class="btn ok xs">🎁 รับปันผล</button><button class="btn xs">✏️</button><button class="btn dl xs">✕</button></div></div>'+
+      '<div class="levsum"><div><span>ทุนที่กู้มา</span><b class="down">'+THB(L.cap)+'</b></div>'+
+      '<div><span>ปันผลคาด/ปี</span><b class="up">'+THB(L.div)+'</b></div>'+
+      '<div><span>ดอกเบี้ยกู้/ปี</span><b class="down">'+THB(intYr)+' ('+(L.rate||0)+'%)</b></div>'+
+      '<div><span>ปันผลได้จริงสะสม</span><b class="up">'+THB(cum)+'</b></div></div>'+
+      '<div class="bar"><i style="width:'+pct.toFixed(0)+'%"></i></div>'+
+      '<div class="pct">ได้ปันผลคืนมาแล้ว '+pct.toFixed(0)+'% ของทุน</div>'+
+      paybackSVG(L.cap,L.div,cum)+summary;
+    const b=el.querySelectorAll('button');b[0].onclick=()=>levReceive(L.id);b[1].onclick=()=>levEdit(L.id);b[2].onclick=()=>delLev(L.id);
+    box.appendChild(el);
+  });
+}
+
+/* ---------- overview ---------- */
+function renderOver(){
+  document.getElementById('ovMonth').textContent=ymLabel(curYM);
+  const list=monthTx(curYM);let tin=0,tout=0;list.forEach(t=>t.type==='in'?tin+=t.amt:tout+=t.amt);
+  document.getElementById('ovIn').textContent=THB(tin);
+  document.getElementById('ovOut').textContent=THB(tout);
+  document.getElementById('ovNet').textContent=(tin-tout>=0?'':'−')+THB(Math.abs(tin-tout));
+  const saveTot=db.pots.reduce((s,p)=>s+(p.saved||0),0);
+  const invNow=db.invs.reduce((s,i)=>s+i.now,0);
+  const invCost=db.invs.reduce((s,i)=>s+i.cost,0);
+  const levCap=db.levs.reduce((s,l)=>s+(l.cap||0),0);
+  const invTotal=invNow+levCap;
+  const debt=db.loans.reduce((s,l)=>s+l.bal,0);
+  document.getElementById('ovSave').textContent=THB(saveTot);
+  document.getElementById('ovInv').textContent=THB(invTotal);
+  const ipl=invNow-invCost;
+  let isb=[];
+  if(db.invs.length)isb.push('<span class="'+(ipl>=0?'up':'down')+'">'+(ipl>=0?'+':'−')+THB(Math.abs(ipl))+'</span>');
+  if(levCap>0)isb.push('รวมกู้มาลงทุน '+THB(levCap));
+  document.getElementById('ovInvSb').innerHTML=isb.join(' · ');
+  const worth=saveTot+invTotal+(db.coopShare||0)-debt;
+  document.getElementById('ovWorth').textContent=(worth<0?'−':'')+THB(Math.abs(worth));
+  renderBarChart();renderCatBars(list);
+}
+function renderBarChart(){
+  // last 6 months
+  const months=[];let [y,m]=curYM.split('-').map(Number);
+  for(let i=5;i>=0;i--){let mm=m-i,yy=y;while(mm<1){mm+=12;yy--}months.push(yy+'-'+String(mm).padStart(2,'0'))}
+  const data=months.map(ym=>{let ti=0,to=0;db.txns.filter(t=>t.date.slice(0,7)===ym).forEach(t=>t.type==='in'?ti+=t.amt:to+=t.amt);return{ym,ti,to}});
+  const max=Math.max(1,...data.map(d=>Math.max(d.ti,d.to)));
+  const W=360,H=180,pad=22,bw=(W-pad*2)/6,gap=4;const base=H-24;
+  let svg='';
+  data.forEach((d,i)=>{
+    const cx=pad+i*bw;
+    const hI=(d.ti/max)*(base-14),hO=(d.to/max)*(base-14);
+    const w=(bw-gap*3)/2;
+    svg+='<rect x="'+(cx+gap).toFixed(1)+'" y="'+(base-hI).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+hI.toFixed(1)+'" rx="3" fill="#34c77b"/>';
+    svg+='<rect x="'+(cx+gap*2+w).toFixed(1)+'" y="'+(base-hO).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+hO.toFixed(1)+'" rx="3" fill="#ef6b8f"/>';
+    svg+='<text x="'+(cx+bw/2).toFixed(1)+'" y="'+(base+13)+'" font-size="9" fill="#a99bb8" text-anchor="middle">'+TH_M[Number(d.ym.split('-')[1])-1]+'</text>';
+  });
+  svg+='<line x1="'+pad+'" y1="'+base+'" x2="'+(W-pad+4)+'" y2="'+base+'" stroke="#eee6f5" stroke-width="1"/>';
+  document.getElementById('barChart').innerHTML=svg;
+}
+function renderCatBars(list){
+  const box=document.getElementById('catBars');
+  const outs=list.filter(t=>t.type==='out');
+  if(!outs.length){box.innerHTML='<div class="empty" style="padding:14px"><span class="e">🧁</span>ยังไม่มีรายจ่ายเดือนนี้</div>';return}
+  const map={};outs.forEach(t=>{const k=t.cat;map[k]=(map[k]||0)+t.amt});
+  const arr=Object.entries(map).sort((a,b)=>b[1]-a[1]);const max=arr[0][1];const tot=arr.reduce((s,x)=>s+x[1],0);
+  box.innerHTML=arr.map(([c,v])=>'<div class="catrow"><div class="cl">'+esc(c)+'</div>'+
+    '<div class="cb"><i style="width:'+(v/max*100).toFixed(0)+'%"></i></div>'+
+    '<div class="cv">'+THB(v)+' <span style="color:var(--g4);font-weight:400">'+(v/tot*100).toFixed(0)+'%</span></div></div>').join('');
+}
+
+/* ---------- export / import ---------- */
+function exportCSV(){
+  const rows=[['วันที่','ประเภท','หมวดหมู่','จำนวนเงิน','โน้ต']];
+  db.txns.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(t=>{
+    rows.push([t.date,t.type==='in'?'รายรับ':'รายจ่าย',t.cat,t.amt,t.note||'']);
+  });
+  const csv='﻿'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  dl(new Blob([csv],{type:'text/csv;charset=utf-8'}),'money.csv');
+}
+function exportJSON(){dl(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),'my-money-backup.json')}
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function importJSON(e){
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!confirm('นำเข้าจะทับข้อมูลปัจจุบันทั้งหมด ยืนยัน?'))return;
+    db=Object.assign({},DEF,d);postRecurring();save();renderAll();alert('นำเข้าสำเร็จ ✨')}catch(err){alert('ไฟล์ไม่ถูกต้อง')}};
+  r.readAsText(f);e.target.value='';
+}
+function wipeAll(){if(!confirm('ล้างข้อมูลทั้งหมด? ควร export เก็บก่อน!'))return;if(!confirm('แน่ใจจริงๆ นะ? กู้คืนไม่ได้'))return;db=JSON.parse(JSON.stringify(DEF));save();renderAll()}
+
+/* ---------- render all ---------- */
+function renderAll(){renderOver();renderDaily();renderSave();renderInv();renderCoop()}
+function init(){
+  document.getElementById('txDate').value=todayISO();
+  postRecurring();
+  setTxType('out');renderAll();
+}
+init();
+</script>
+</body>
+</html>

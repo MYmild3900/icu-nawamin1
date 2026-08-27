@@ -1,1 +1,6 @@
 .claude/
+
+# ข้อมูลการเงินส่วนตัว — ห้ามขึ้น GitHub สาธารณะ
+my-money-data.json
+*-money-data.json
+my-money-backup*.json
