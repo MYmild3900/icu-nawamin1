@@ -4385,13 +4385,11 @@ function handleQRResult(code, mode){
   // QR ใหม่เก็บเฉพาะรหัส แต่ QR เก่าอาจเป็น "รหัส|ชื่อ" — ตัดเอาส่วนหน้า "|" เป็นรหัส
   var scanned = String(code||'').split('|')[0].trim();
   var sl = scanned.toLowerCase();
-  // จับคู่ด้วยรหัสแบบตรงตัวก่อน (แม่นสุด) แล้วค่อย fallback ด้วยชื่อ
+  // จับคู่ด้วย "รหัสตรงเป๊ะ" ก่อน แล้ว fallback ด้วย "ชื่อตรงเป๊ะ" เท่านั้น
+  // เลิกใช้ substring (n.includes/sl.includes) — เพราะค่าสแกนที่เพี้ยน/บางส่วน (เช่นมี "No.16") จะไปจับพัสดุผิดตัว (NG No.16) โดยไม่ตั้งใจ
   var item = ITEMS.find(function(i){ return String(i.code).toLowerCase() === sl; });
   if(!item && sl){
-    item = ITEMS.find(function(i){
-      var n = (i.name||'').toLowerCase();
-      return n === sl || n.includes(sl) || sl.includes(n);
-    });
+    item = ITEMS.find(function(i){ return String(i.name||'').toLowerCase().trim() === sl; });
   }
 
   if(!item){
