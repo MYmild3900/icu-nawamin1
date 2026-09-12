@@ -6355,27 +6355,29 @@ function renderHealth(){
   var isBlankLot=function(n){ return !n || n==='—' || n==='-'; };
   var overs=[], opens=[], dupRows=[], similar=[], sci=[], dupCodes=window.DUP_CODES||[];
   ITEMS.forEach(function(item){
+    // ★ overs/opens: ใช้ item.lots (ชุดเดียวกับหน้านับ/เบิก — จับด้วย code+ชื่อ+ล็อตเก่าครบ) เพื่อให้ทุกหน้ารายงานตรงกัน
+    var opLots = (typeof realLotsOf==='function') ? realLotsOf(item) : (item.lots||[]).filter(function(L){ return !isBlankLot(L.lot); });
+    var opSum = opLots.reduce(function(s,L){ return s+(parseFloat(L.qty)||0); }, 0);
+    var cur = parseFloat(item.cur)||0;
+    if(opSum > cur) overs.push({item:item, lotSum:opSum});
+    else if(opSum > 0 && opSum < cur) opens.push({item:item, lotSum:opSum});   // มีล็อตจริงบางส่วน + ไม่ระบุล็อตบางส่วน
+    // ตรวจ "แถวดิบในชีต Lot" (เฉพาะที่มีรหัส): ซ้ำแถว/ชื่อคล้าย/เลขเพี้ยน
     var reg = regByCode[String(item.code).trim()];
-    // นับเฉพาะแถวที่ "มีชื่อล็อตจริง" — แถวล็อต "—" ถือเป็นของไม่ระบุล็อต ไม่ใช่ล็อต
     var realReg = (reg||[]).filter(function(L){ return !isBlankLot(L.lot); });
     if(realReg.length){
-      var lotSum = realReg.reduce(function(s,L){ return s+L.qty; },0);
-      var cur = parseFloat(item.cur)||0;
-      if(lotSum > cur) overs.push({item:item, lotSum:lotSum});
-      else if(lotSum < cur) opens.push({item:item, lotSum:lotSum});   // มีล็อตจริงบางส่วน + ไม่ระบุล็อตบางส่วน
-      // แถวซ้ำชื่อเดียวกัน
       var byName={};
       realReg.forEach(function(L){ byName[L.lot]=(byName[L.lot]||0)+1; });
       Object.keys(byName).forEach(function(n){ if(byName[n]>1) dupRows.push({item:item, lot:n, count:byName[n]}); });
-      // ชื่อคล้ายกัน (ต่างกัน 1 ตัวอักษร)
       var names=Object.keys(byName);
       for(var i=0;i<names.length;i++) for(var j=i+1;j<names.length;j++){
         if(names[i] && names[j] && levDist_(names[i],names[j])<=1) similar.push({item:item, a:names[i], b:names[j]});
       }
-      // ล็อตโดนแปลงเป็นเลขวิทยาศาสตร์
       realReg.forEach(function(L){ if(/^\d+(\.\d+)?e\+\d+$/i.test(L.lot)) sci.push({item:item, lot:L.lot}); });
     }
   });
+  // แถวล็อตในชีต Lot ที่ "ไม่มีรหัส" — จับคู่ด้วยชื่อได้ แต่ควรเติมรหัสให้ครบ (ไม่งั้นบางรายงานมองไม่เห็น)
+  var noCodeLots=[];
+  raw.forEach(function(lr){ if(!String(lr.code||'').trim() && !isBlankLot(lr.lot) && (parseFloat(lr.qty)||0)>0 && String(lr.name||'').trim()) noCodeLots.push({name:lr.name, lot:lr.lot, qty:parseFloat(lr.qty)||0}); });
 
   // นับ "ปกติ" = จำนวนพัสดุที่ไม่ติดปัญหาจริงข้อใดเลย (นับพัสดุแบบไม่ซ้ำ; opens = ยอดตั้งต้น ไม่ถือเป็นปัญหา)
   var problemCodes = {};
@@ -6392,7 +6394,8 @@ function renderHealth(){
     + chip('🔁 แถวล็อตซ้ำ '+dupRows.length,'var(--rd-b)','var(--rd-t)')
     + chip('✏️ ชื่อคล้ายกัน '+similar.length,'var(--wn-b)','var(--wn-t)')
     + chip('🔢 ล็อตเพี้ยน '+sci.length,'var(--rd-b)','var(--rd-t)')
-    + chip('🆔 รหัสซ้ำ '+dupCodes.length,'var(--rd-b)','var(--rd-t)');
+    + chip('🆔 รหัสซ้ำ '+dupCodes.length,'var(--rd-b)','var(--rd-t)')
+    + chip('🏷️ ล็อตไม่มีรหัส '+noCodeLots.length,'var(--wn-b)','var(--wn-t)');
 
   function card(title, color, bodyHtml, adviceHtml){
     return '<div class="card" style="padding:14px;margin-bottom:12px;border-left:4px solid '+color+'">'
@@ -6428,6 +6431,12 @@ function renderHealth(){
     h += card('🆔 รหัสพัสดุซ้ำหลายแถวในชีตหมวด ('+dupCodes.length+')','var(--rd-t)',
       dupCodes.map(function(c){ var it=ITEMS.find(function(i){return i.code===c;}); return '<div style="padding:5px 0;border-bottom:1px solid var(--g1);font-size:12px">'+c+' — '+(it?it.name:'')+'</div>'; }).join(''),
       'ระบบจะอัปเดตแค่แถวแรกเสมอ — ควรยุบเหลือแถวเดียวในชีตหมวด (ลบแถวซ้ำ) ค่ะ');
+  }
+  if(noCodeLots.length){
+    h += card('🏷️ ล็อตในทะเบียนที่ยังไม่มีรหัสพัสดุ ('+noCodeLots.length+')','var(--wn-t)',
+      noCodeLots.slice(0,30).map(function(r){ return '<div style="padding:5px 0;border-bottom:1px solid var(--g1);font-size:12px">'+r.name+' — ล็อต '+r.lot+' ('+r.qty+')</div>'; }).join('')
+        + (noCodeLots.length>30?'<div style="font-size:11px;color:var(--g4);padding:4px 0">... อีก '+(noCodeLots.length-30)+' แถว</div>':''),
+      'แถวเหล่านี้จับคู่พัสดุด้วย "ชื่อ" ได้ (หน้านับ/เบิกเห็นครบ) แต่ยังไม่มีรหัส — เติมรหัสในคอลัมน์ code ของชีต Lot ให้ตรงกับพัสดุ เพื่อให้ทุกรายงานตรงกันค่ะ');
   }
   if(opens.length){
     h += card('ℹ️ มีของที่ยังไม่ระบุล็อต — ยอดตั้งต้น (ไม่ใช่ข้อผิดพลาด) ('+opens.length+')','var(--g4)',
