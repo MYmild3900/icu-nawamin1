@@ -3,7 +3,7 @@
 // กลยุทธ์: network-first สำหรับไฟล์แอป (ออนไลน์ได้เวอร์ชันล่าสุด, ออฟไลน์ใช้ที่ cache ไว้)
 // ส่วน Google Sheets / Apps Script (คนละ origin) ปล่อยไปเน็ตตามปกติ — ออฟไลน์แล้วระบบคิวจัดการเอง
 
-const CACHE = 'icu-nawamin1-v11';
+const CACHE = 'icu-nawamin1-v12';
 const SHELL = [
   './',
   './index.html',
@@ -21,7 +21,14 @@ const SHELL = [
 self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(CACHE)
-      .then(function (c) { return c.addAll(SHELL); })
+      // ดึงไฟล์สดจากเน็ต (cache:'reload') ตอนติดตั้ง — กันแคช HTTP เก่าติดมาในเวอร์ชันใหม่
+      .then(function (c) {
+        return Promise.all(SHELL.map(function (u) {
+          return fetch(new Request(u, { cache: 'reload' }))
+            .then(function (r) { if (r && r.ok) return c.put(u, r); })
+            .catch(function () {});
+        }));
+      })
       .then(function () { return self.skipWaiting(); })
       .catch(function () { /* ไฟล์บางตัวโหลดไม่ได้ตอนติดตั้ง — ข้ามไป */ })
   );
@@ -47,8 +54,11 @@ self.addEventListener('fetch', function (e) {
   // จัดการเฉพาะไฟล์ของแอป (same-origin) — ปล่อย Google Sheets/Apps Script/รูป CDN ไปเน็ตปกติ
   if (url.origin !== self.location.origin) return;
 
+  // เปิดหน้า/โหลด HTML → บังคับดึงสดจากเน็ต ข้ามแคช HTTP (กันโค้ดเก่าค้างบน PWA แม้ hard reload)
+  var freshHTML = req.mode === 'navigate' || /\/(index\.html|roster\.html)?$/.test(url.pathname);
+
   e.respondWith(
-    fetch(req)
+    fetch(req, freshHTML ? { cache: 'reload' } : undefined)
       .then(function (res) {
         // ออนไลน์ได้ไฟล์ใหม่ → อัปเดต cache ไว้ใช้ตอนออฟไลน์
         var copy = res.clone();
