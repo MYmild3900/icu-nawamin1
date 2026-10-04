@@ -102,9 +102,25 @@ label.fld{font-size:11px;font-weight:600;color:var(--g5);display:block;margin-bo
 .cal .dow{text-align:center;font-size:11px;font-weight:700;color:var(--g5);padding:4px 0}
 .cal .cell{min-height:90px;border:1.5px solid var(--g1);border-radius:var(--r8);padding:5px;cursor:pointer;
   background:var(--wt);display:flex;flex-direction:column;gap:3px;transition:.1s;overflow:hidden;position:relative}
-.cal .cell.noted{border-color:var(--pk-t)}
-.cal .nmk{position:absolute;top:3px;left:3px;font-size:13px;line-height:1;z-index:1;
-  background:var(--pk-b);border-radius:8px;padding:2px 4px;box-shadow:0 1px 3px rgba(150,110,190,.25)}
+.cal .cell.noted{border-color:var(--pk-t);background:linear-gradient(180deg,var(--wt) 55%,var(--pk-b))}
+.cal .nmk{position:absolute;top:3px;left:3px;font-size:13px;line-height:1;z-index:2;cursor:pointer;
+  background:var(--pk-b);border-radius:9px;padding:2px 5px;box-shadow:0 1px 4px rgba(194,91,138,.4);
+  border:1px solid var(--pk-t);animation:nmpulse 1.7s ease-in-out infinite}
+.cal .nmk:hover{filter:brightness(.97)}
+@keyframes nmpulse{0%,100%{transform:scale(1);box-shadow:0 1px 4px rgba(194,91,138,.4)}
+  50%{transform:scale(1.15);box-shadow:0 2px 9px rgba(194,91,138,.6)}}
+/* reminder popup */
+.nmodal{position:fixed;inset:0;background:rgba(75,65,89,.45);display:flex;align-items:center;justify-content:center;
+  z-index:120;padding:20px;opacity:0;transition:.18s}
+.nmodal.show{opacity:1}
+.nmbox{background:var(--wt);border-radius:20px;max-width:340px;width:100%;overflow:hidden;
+  box-shadow:0 20px 50px rgba(75,65,89,.35);transform:scale(.9) translateY(8px);transition:.2s}
+.nmodal.show .nmbox{transform:scale(1) translateY(0)}
+.nmhead{background:linear-gradient(135deg,var(--li),#F7B2B7);color:var(--g7);font-weight:700;
+  font-family:'Mali','Sarabun',sans-serif;font-size:15px;padding:13px 18px;display:flex;align-items:center;gap:7px}
+.nmbody{padding:15px 18px;font-size:15px;color:var(--g7);white-space:pre-wrap;line-height:1.55}
+.nmbody .nmshift{margin-top:11px;padding-top:10px;border-top:1px dashed var(--g2);font-size:13px;color:var(--g5);white-space:normal}
+.nmact{display:flex;gap:8px;justify-content:flex-end;padding:0 16px 15px}
 .cal .cell:hover{border-color:var(--li)}
 .cal .cell.other{background:var(--g0);opacity:.55}
 .cal .cell.today{border-color:var(--nv);box-shadow:0 0 0 1.5px var(--nv)}
@@ -164,7 +180,7 @@ h1,h2,.tab,.btn,.dtitle,.card h2,.glabel,.stat .v,.stat .l,.pchip,.dbox .dh{font
 .toast{border-radius:24px;background:linear-gradient(135deg,var(--nv),var(--li2));box-shadow:0 8px 22px rgba(138,95,194,.35)}
 @keyframes bob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
 .hd .emo{animation:bob 2.6s ease-in-out infinite}
-@media(prefers-reduced-motion:reduce){ .hd .emo{animation:none} *{transition:none!important} }
+@media(prefers-reduced-motion:reduce){ .hd .emo,.cal .nmk{animation:none} *{transition:none!important} }
 </style>
 </head>
 <body>
@@ -270,6 +286,16 @@ h1,h2,.tab,.btn,.dtitle,.card h2,.glabel,.stat .v,.stat .l,.pchip,.dbox .dh{font
   </div>
 </div>
 
+<div class="nmodal hide" id="noteModal">
+  <div class="nmbox">
+    <div class="nmhead">🔔 <span id="nmDate"></span></div>
+    <div class="nmbody"><div id="nmText"></div><div class="nmshift hide" id="nmShift"></div></div>
+    <div class="nmact">
+      <button class="btn sm" id="nmEdit">✏️ แก้ไข</button>
+      <button class="btn sm pri" id="nmClose">ปิด</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -461,16 +487,41 @@ function renderCal(){
     let bdgs=list.map(en=>{const du=dutyById(en.dutyId);if(!du)return"";const[bg,fg]=colorOf(du);
       return `<div class='bdg ${en.done?'done':''}' style='background:${bg};color:${fg}'>${esc(du.emoji||'')}${esc(du.code)}</div>`;}).join("");
     h+=`<div class='cell ${dow===0||dow===6?'we':''} ${key===tk?'today':''} ${hasNote?'noted':''}' data-k='${key}'>
-      ${hasNote?`<span class='nmk' title='มีโน้ต: ${esc(hasNote)}'>📝</span>`:""}
+      ${hasNote?`<span class='nmk' data-note='${key}' title='แตะดูโน้ต'>📝</span>`:""}
       <div class='dnum'>${d}</div>${bdgs}</div>`;
   }
   const cg=document.getElementById("calGrid"); cg.innerHTML=h;
   cg.querySelectorAll("[data-k]").forEach(c=>c.onclick=()=>{ state.sel=c.dataset.k; save(); goTab("day"); });
+  cg.querySelectorAll(".nmk").forEach(m=>m.onclick=(e)=>{ e.stopPropagation(); openNoteModal(m.dataset.note); });
 
   // legend
   document.getElementById("calLegend").innerHTML=state.duties.map(d=>{const[bg,fg]=colorOf(d);
     return `<span class='bdg' style='background:${bg};color:${fg};font-size:11px;padding:2px 8px'>${esc(d.emoji||'')} ${esc(d.name)}</span>`;}).join("");
 }
+
+/* ===== reminder popup ===== */
+const noteModal=document.getElementById("noteModal");
+let nmKey=null;
+function fmtDateTH(key){ const {y,m,d}=parseKey(key); return `${d} ${TH_MONTH[m]} ${be(y)} · วัน${TH_DOW_FULL[new Date(y,m,d).getDay()]}`; }
+function openNoteModal(key){
+  nmKey=key;
+  document.getElementById("nmDate").textContent=fmtDateTH(key);
+  document.getElementById("nmText").textContent=state.notes[key]||"(ไม่มีข้อความ)";
+  // แสดงเวรของวันนั้นเป็นบริบท
+  const list=state.entries[key]||[];
+  const shiftEl=document.getElementById("nmShift");
+  if(list.length){
+    shiftEl.textContent="🗓️ เวรวันนี้: "+list.map(en=>{const du=dutyById(en.dutyId);return du?`${du.emoji||''} ${du.name}`:"";}).filter(Boolean).join(", ");
+    shiftEl.classList.remove("hide");
+  } else shiftEl.classList.add("hide");
+  noteModal.classList.remove("hide");
+  requestAnimationFrame(()=>noteModal.classList.add("show"));
+}
+function closeNoteModal(){ noteModal.classList.remove("show"); setTimeout(()=>noteModal.classList.add("hide"),180); }
+document.getElementById("nmClose").onclick=closeNoteModal;
+document.getElementById("nmEdit").onclick=()=>{ if(nmKey){ state.sel=nmKey; save(); goTab("day"); } closeNoteModal(); };
+noteModal.onclick=(e)=>{ if(e.target===noteModal) closeNoteModal(); };
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!noteModal.classList.contains("hide")) closeNoteModal(); });
 
 /* ================= SUMMARY ================= */
 document.getElementById("sPrev").onclick=()=>{stepMonth(-1);renderSummary();};
