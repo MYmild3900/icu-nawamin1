@@ -4194,6 +4194,24 @@ function renderHist(){
   const summEl = document.getElementById('hist-summary');
   if (!tbody) return;
 
+  // คำนวณจุด "คงเหลือกระโดด" — คงเหลือที่ไม่ต่อเนื่องจากรายการก่อนหน้าของพัสดุเดียวกัน (รับ/เบิก)
+  // เพื่อติดเครื่องหมายอธิบาย (เกิดจากนับปรับ/ใช้พร้อมกัน — ไม่ใช่ความผิดของรายการนั้น) — คำนวณบน TXLOG เต็มก่อนกรอง
+  (function(){
+    var byCode={};
+    // ลำดับเวลา = กลับ TXLOG (ใหม่สุดอยู่บน) ให้เก่า→ใหม่ ตามลำดับที่บันทึกจริงในชีต (กันเพี้ยนตอนเวลาตรงกันเป๊ะ)
+    TXLOG.slice().reverse().forEach(function(t){ if(t && t.code!=null) (byCode[t.code]=byCode[t.code]||[]).push(t); });
+    Object.keys(byCode).forEach(function(c){
+      var arr=byCode[c];
+      for(var i=0;i<arr.length;i++){
+        arr[i]._balJump=false;
+        if(i===0 || arr[i].type==='adj') continue;   // ปรับยอด = นับ กระโดดได้ปกติ (มี badge บอกแล้ว)
+        var prev=parseFloat(arr[i-1].newStock)||0, q=parseFloat(arr[i].qty)||0;
+        var expected = arr[i].type==='recv' ? prev+q : prev-q;
+        if(Math.abs(expected-(parseFloat(arr[i].newStock)||0))>0.001) arr[i]._balJump=true;
+      }
+    });
+  })();
+
   // ผู้ใช้ทั่วไปเห็นเฉพาะรายการที่ตัวเองทำ (admin เห็นทั้งหมด)
   const meName = (typeof isAdmin==='function' && !isAdmin()) ? String(window.CURRENT_USER_NAME||'').trim() : '';
   let filtered = TXLOG.filter(tx => {
@@ -4234,7 +4252,7 @@ function renderHist(){
       <td style="font-weight:700;color:${qtyColor}">${qtySign}${tx.qty}</td>
       <td>${tx.unit}</td>
       <td style="font-size:11px;color:var(--g5)">${tx.user}</td>
-      <td style="font-weight:700;color:${stockColor}">${tx.newStock}</td>
+      <td style="font-weight:700;color:${stockColor}">${tx.newStock}${(tx._balJump && searchF) ? ' <span title="คงเหลือนี้เป็นยอดจริง ณ เวลานั้น (ปรับจากการนับจริง/มีคนทำพร้อมกัน) — ไม่ใช่ความผิดพลาดของรายการนี้" style="color:var(--g4);font-weight:400;cursor:help">&#8505;</span>' : ''}</td>
     </tr>`;
   }).join('');
 
