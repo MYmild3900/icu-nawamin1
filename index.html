@@ -3845,25 +3845,33 @@ function saveWd(){
     const newStock = Math.max(0, oldStock - qty);
     if (item) item.cur = newStock;
 
+    // แผนตัดล็อต FEFO (กันทะเบียนล็อตดริฟต์): เริ่มจากล็อตที่เลือก → หมดอายุใกล้สุดก่อน → ที่เหลือเป็น "—"
+    var lotPlan = (item && item.code && item.code !== '—') ? fefoDeductPlan(item, lot, qty) : [];
+    var lotStr  = !lotPlan.length ? lot
+                : lotPlan.length === 1 ? lotPlan[0].lot
+                : lotPlan.map(function(p){ return p.lot + '×' + p.qty; }).join(', ');
+
     TXLOG.unshift({
       date: thaiDate(now),
       rawDate: now,
       type: 'wd',
-      name, code, lot, qty, unit,
+      name, code, lot: lotStr, qty, unit,
       oldStock, newStock,
       user
     });
-    syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: thaiDate(now), type: 'เบิกออก', code, name, qty, remaining: newStock, lot, user, note: '' }, 'ประวัติเบิก: '+name));
+    syncPromises.push(syncOrQueue(GS_HISTORY_URL, { date: thaiDate(now), type: 'เบิกออก', code, name, qty, remaining: newStock, lot: lotStr, user, note: '' }, 'ประวัติเบิก: '+name));
     // อัปเดตยอดคงเหลือแบบ "ส่วนต่าง" (หักออก qty จากยอดจริงในเซิร์ฟเวอร์) — กันหลายคนเบิกพร้อมกันแล้วเขียนทับกัน
     if (item && item.code && item.code !== '—') {
       syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'adjustStock', code: item.code, delta: -qty }, 'ยอดคงเหลือ: '+item.name));
-      // ตัดยอด lot ที่เลือกในทะเบียน lot (tab Lot)
-      syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'deductLot', code: item.code, name: item.name, lot: lot, qty: qty }, 'ตัดล็อต: '+item.name));
-      var exL = (item.lots||[]).find(function(L){ return L.lot === (lot||'—'); });
-      if (exL) {
-        exL.qty = Math.max(0, (parseFloat(exL.qty)||0) - qty);
-        if (exL.qty <= 0) item.lots = item.lots.filter(function(L){ return L !== exL; });
-      }
+      // ตัดยอดทะเบียนล็อตตามแผน FEFO — รวมทุกบรรทัด = qty เสมอ (ทะเบียนล็อตลดเท่าคงเหลือ)
+      lotPlan.forEach(function(p){
+        syncPromises.push(syncOrQueue(GS_ITEMS_URL, { action: 'deductLot', code: item.code, name: item.name, lot: p.lot, qty: p.qty }, 'ตัดล็อต: '+item.name+' '+p.lot));
+        var exL = (item.lots||[]).find(function(L){ return L.lot === p.lot; });
+        if (exL) {
+          exL.qty = Math.max(0, (parseFloat(exL.qty)||0) - p.qty);
+          if (exL.qty <= 0 && exL.lot !== '—' && exL.lot !== '-') item.lots = item.lots.filter(function(L){ return L !== exL; });
+        }
+      });
     }
     saved++;
   });
@@ -6485,6 +6493,25 @@ function renderCountPage(){
 // ล็อตจริงของพัสดุ (จากทะเบียน Lot) — ใช้ตัดสินว่าแถวนับต้องแยกรายล็อตไหม
 function realLotsOf(item){
   return (item.lots||[]).filter(function(L){ return L.lot && L.lot!=='—' && L.lot!=='-'; });
+}
+// สร้างแผน "ตัดล็อต" เวลาเบิก qty ชิ้น แบบ FEFO เพื่อกันทะเบียนล็อตดริฟต์:
+//   • เริ่มจากล็อตที่ผู้ใช้เลือก (ถ้าเป็นล็อตมีชื่อ) → ไล่ล็อตหมดอายุใกล้สุดก่อน → ส่วนที่เหลือเป็น "ไม่ระบุล็อต (—)"
+//   • ผลรวมทุกบรรทัดในแผน = qty เสมอ → ทะเบียนล็อตลดลงเท่ากับคงเหลือพอดี ไม่มีทางบวมเกิน
+function fefoDeductPlan(item, preferLot, qty){
+  qty = parseFloat(qty)||0;
+  var plan=[], remain=qty;
+  var order = realLotsOf(item).filter(function(L){ return (parseFloat(L.qty)||0)>0; });  // item.lots เรียง FEFO มาแล้ว
+  if(preferLot && preferLot!=='—' && preferLot!=='-'){
+    var i = order.findIndex(function(L){ return L.lot===preferLot; });
+    if(i>0){ order.unshift(order.splice(i,1)[0]); }   // ยกล็อตที่เลือกขึ้นก่อน คงลำดับ FEFO ของที่เหลือ
+  }
+  order.forEach(function(L){
+    if(remain<=0) return;
+    var take=Math.min(remain, parseFloat(L.qty)||0);
+    if(take>0){ plan.push({lot:L.lot, qty:take}); remain-=take; }
+  });
+  if(remain>0) plan.push({lot:'—', qty:remain});   // ที่เหลือ = ของไม่ระบุล็อต (ถังเปิด)
+  return plan;
 }
 // อ่าน "จำนวนชิ้นต่อกล่อง" จากช่องหน่วยบรรจุ เช่น "10 ชิ้น/กล่อง", "1กล่อง/30ชิ้น" → 10, 30
 // ถ้าหน่วยนับเป็น "กล่อง" อยู่แล้ว = นับเป็นกล่องตรง ๆ ไม่ต้องมีช่องแปลงกล่อง (คืน 0)
